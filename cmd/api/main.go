@@ -35,13 +35,9 @@ func main() {
 		setConfig(cfg).
 		setLogger(logger)
 
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("/v1/healthcheck", app.healthcheckHandler)
-
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      mux,
+		Handler:      app.routes(),
 		IdleTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),

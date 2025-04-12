@@ -9,8 +9,9 @@ import (
 )
 
 func TestHealthCheck(t *testing.T) {
+	cfg := config{env: "development"}
 	app := newApplication().
-		setConfig(config{env: "development"}).
+		setConfig(cfg).
 		setLogger(nil)
 
 	req, err := http.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
@@ -23,7 +24,7 @@ func TestHealthCheck(t *testing.T) {
 	wantBody := fmt.Sprintf("status: available\nenviroment: %s\nversion: 1.0.0\n", app.config.env)
 	gotBody, err := io.ReadAll(resp.Body)
 	assertNoError(t, err)
-	assertBody(t, string(gotBody), wantBody)
+	assertStrs(t, string(gotBody), wantBody)
 }
 
 func assertNoError(t testing.TB, err error) {
@@ -33,7 +34,7 @@ func assertNoError(t testing.TB, err error) {
 	}
 }
 
-func assertBody(t testing.TB, got, want string) {
+func assertStrs(t testing.TB, got, want string) {
 	if got != want {
 		t.Errorf("\ngot:\n%v\nwant:\n%v", string(got), want)
 	}

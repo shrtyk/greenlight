@@ -22,70 +22,60 @@ func TestMovies(t *testing.T) {
 		setConfig(cfg).
 		setLogger(nil)
 
+	router := app.routes()
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
 	cases := []struct {
-		name    string
-		handler func(w http.ResponseWriter, r *http.Request)
-		method  string
-		params  *param
-		url     string
-		body    string
-		code    int
-		want    string
+		name   string
+		method string
+		path   string
+		want   string
+		code   int
 	}{
 		{
-			name:    "test create new movie",
-			handler: app.createMoviehandler,
-			method:  http.MethodPost,
-			url:     "/v1/movies",
-			body:    "",
-			code:    http.StatusCreated,
-			want:    "create a new movie\n",
+			name:   "create new movie",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			want:   "create a new movie\n",
+			code:   http.StatusCreated,
 		},
 		{
-			name:    "test get right movie id",
-			handler: app.showMovieHandler,
-			method:  http.MethodGet,
-			params:  &param{"id", "123"},
-			url:     "/v1/movies/123",
-			code:    http.StatusOK,
-			want:    "show the details of movie 123\n",
+			name:   "get right movie id",
+			method: http.MethodGet,
+			path:   "/v1/movies/123",
+			want:   "show the details of movie 123\n",
+			code:   http.StatusOK,
 		},
 		{
-			name:    "test get wrong movie id",
-			handler: app.showMovieHandler,
-			method:  http.MethodGet,
-			params:  &param{"id", "-112"},
-			url:     "/v1/movies/-112",
-			code:    http.StatusNotFound,
-			want:    "404 page not found\n",
+			name:   "get wrong movie id (negative)",
+			method: http.MethodGet,
+			path:   "/v1/movies/-112",
+			want:   "404 page not found\n",
+			code:   http.StatusNotFound,
 		},
 		{
-			name:    "test get wrong movie id (text)",
-			handler: app.showMovieHandler,
-			method:  http.MethodGet,
-			params:  &param{"id", "shrek"},
-			url:     "/v1/movies/shrek",
-			code:    http.StatusNotFound,
-			want:    "404 page not found\n",
+			name:   "get wrong movie id (text)",
+			method: http.MethodGet,
+			path:   "/v1/movies/shrek",
+			want:   "404 page not found\n",
+			code:   http.StatusNotFound,
 		},
 	}
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("%s", c.name), func(t *testing.T) {
-			req, err := http.NewRequest(c.method, c.url, nil)
+			req, err := http.NewRequest(c.method, ts.URL+c.path, nil)
 			assertNoError(t, err)
 
-			if c.params != nil {
-				req = withRouterParams(req, c.params.key, c.params.val)
-			}
-
-			resp := httptest.NewRecorder()
-			c.handler(resp, req)
+			resp, err := http.DefaultClient.Do(req)
+			assertNoError(t, err)
+			defer resp.Body.Close()
 
 			got, err := io.ReadAll(resp.Body)
 
 			assertNoError(t, err)
-			assertStatusCode(t, resp.Code, c.code)
+			assertStatusCode(t, resp.StatusCode, c.code)
 			assertStrs(t, string(got), c.want)
 		})
 	}

@@ -39,7 +39,7 @@ func TestMovies(t *testing.T) {
 			name:   "create new movie",
 			method: http.MethodPost,
 			path:   "/v1/movies",
-			body:   `{"title": "Moana", "runtime": 107, "genres": ["animation", "adventure"], "year": 2000}`,
+			body:   `{"title": "Moana", "runtime": "107 mins", "genres": ["animation", "adventure"], "year": 2000}`,
 			want:   "{Title:Moana Year:2000 Runtime:107 Genres:[animation adventure]}\n",
 			code:   http.StatusCreated,
 		},

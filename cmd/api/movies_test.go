@@ -75,6 +75,22 @@ func TestMovies(t *testing.T) {
 			code:   http.StatusBadRequest,
 		},
 		{
+			name:   "create new movie with unknown JSON keys",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `{"title": "Moana", "rating": "PG"}`,
+			want:   `{"error":"body contains unknown key \"rating\""}`,
+			code:   http.StatusBadRequest,
+		},
+		{
+			name:   "create new movie several JSON values",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `{"title": "Moana"}{"title": "Top Gun"}`,
+			want:   `{"error":"Body must contain a single JSON value"}`,
+			code:   http.StatusBadRequest,
+		},
+		{
 			name:   "create new movie wrong method",
 			method: http.MethodGet,
 			path:   "/v1/movies",

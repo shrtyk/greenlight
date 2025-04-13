@@ -9,7 +9,6 @@ import (
 )
 
 func (app *application) createMoviehandler(w http.ResponseWriter, r *http.Request) {
-	// new(data.Movie)
 	movie := &struct {
 		Title   string   `json:"title"`
 		Year    int32    `json:"year"`
@@ -17,7 +16,7 @@ func (app *application) createMoviehandler(w http.ResponseWriter, r *http.Reques
 		Genres  []string `json:"genres"`
 	}{}
 	if err := app.readJson(w, r, movie); err != nil {
-		app.errorResponse(w, r, http.StatusBadRequest, err.Error())
+		app.badRequestResponse(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusCreated)

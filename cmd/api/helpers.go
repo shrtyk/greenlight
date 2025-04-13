@@ -10,6 +10,8 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type envelope map[string]any
+
 func (app *application) readIDParam(r *http.Request) (int64, error) {
 	params := httprouter.ParamsFromContext(r.Context())
 
@@ -20,11 +22,18 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
-func (app *application) writeJson(w http.ResponseWriter, data any, status int, headers http.Header) error {
+func (app *application) writeJson(w http.ResponseWriter, data envelope, status int, headers http.Header) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
+
+	// Uncomment to add extra readability during manual testing:
+	// buf := bytes.Buffer{}
+	// if err := json.Indent(&buf, b, "", "\t"); err != nil {
+	// 	return err
+	// }
+	// b = buf.Bytes()
 
 	maps.Copy(w.Header(), headers)
 	w.Header().Set("content-type", "application/json")

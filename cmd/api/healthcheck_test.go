@@ -14,18 +14,20 @@ func TestHealthCheck(t *testing.T) {
 		setConfig(cfg).
 		setLogger(nil)
 
-	report := healthReport{
-		Status:     "available",
-		Enviroment: app.config.env,
-		Version:    version,
-	}
-
 	req, err := http.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
 	assertNoError(t, err)
 
 	resp := httptest.NewRecorder()
 
 	app.healthcheckHandler(resp, req)
+
+	report := envelope{
+		"status": "available",
+		"system_info": map[string]string{
+			"enviroment": app.config.env,
+			"version":    version,
+		},
+	}
 
 	wantBody, err := json.Marshal(report)
 	assertNoError(t, err)

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +14,12 @@ func TestHealthCheck(t *testing.T) {
 		setConfig(cfg).
 		setLogger(nil)
 
+	report := healthReport{
+		Status:     "available",
+		Enviroment: app.config.env,
+		Version:    version,
+	}
+
 	req, err := http.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
 	assertNoError(t, err)
 
@@ -21,10 +27,12 @@ func TestHealthCheck(t *testing.T) {
 
 	app.healthcheckHandler(resp, req)
 
-	wantBody := fmt.Sprintf("status: available\nenviroment: %s\nversion: 1.0.0\n", app.config.env)
+	wantBody, err := json.Marshal(report)
+	assertNoError(t, err)
+
 	gotBody, err := io.ReadAll(resp.Body)
 	assertNoError(t, err)
-	assertStrs(t, string(gotBody), wantBody)
+	assertStrs(t, string(gotBody), string(wantBody))
 }
 
 func assertNoError(t testing.TB, err error) {

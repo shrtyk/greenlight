@@ -41,6 +41,13 @@ func TestMovies(t *testing.T) {
 			code:   http.StatusCreated,
 		},
 		{
+			name:   "create new movie wrong method",
+			method: http.MethodGet,
+			path:   "/v1/movies",
+			want:   `{"error":"the GET method is not supported for this resource"}`,
+			code:   http.StatusMethodNotAllowed,
+		},
+		{
 			name:   "get right movie id",
 			method: http.MethodGet,
 			path:   "/v1/movies/123",
@@ -51,14 +58,14 @@ func TestMovies(t *testing.T) {
 			name:   "get wrong movie id (negative)",
 			method: http.MethodGet,
 			path:   "/v1/movies/-112",
-			want:   "404 page not found\n",
+			want:   `{"error":"the requested resource could not be found"}`,
 			code:   http.StatusNotFound,
 		},
 		{
 			name:   "get wrong movie id (text)",
 			method: http.MethodGet,
 			path:   "/v1/movies/shrek",
-			want:   "404 page not found\n",
+			want:   `{"error":"the requested resource could not be found"}`,
 			code:   http.StatusNotFound,
 		},
 	}

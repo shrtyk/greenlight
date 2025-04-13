@@ -44,7 +44,7 @@ func TestMovies(t *testing.T) {
 			name:   "get right movie id",
 			method: http.MethodGet,
 			path:   "/v1/movies/123",
-			want:   `{"movie":{"id":123,"title":"Casablanca","runtime":"102","genres":["drama","romance","war"],"version":1}}`,
+			want:   `{"movie":{"id":123,"title":"Casablanca","runtime":"102 mins","genres":["drama","romance","war"],"version":1}}`,
 			code:   http.StatusOK,
 		},
 		{

@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
@@ -30,6 +31,7 @@ func TestMovies(t *testing.T) {
 		name   string
 		method string
 		path   string
+		body   string
 		want   string
 		code   int
 	}{
@@ -37,8 +39,40 @@ func TestMovies(t *testing.T) {
 			name:   "create new movie",
 			method: http.MethodPost,
 			path:   "/v1/movies",
-			want:   "create a new movie\n",
+			body:   `{"title": "Moana", "runtime": 107, "genres": ["animation", "adventure"], "year": 2000}`,
+			want:   "{Title:Moana Year:2000 Runtime:107 Genres:[animation adventure]}\n",
 			code:   http.StatusCreated,
+		},
+		{
+			name:   "create new movie badly-formed JSON 1",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `?xml version="1.0" encoding="UTF-8"?><note><to>Alex</to></note>`,
+			want:   `{"error":"body contains badly-formed JSON (at character 1)"}`,
+			code:   http.StatusBadRequest,
+		},
+		{
+			name:   "create new movie badly-formed JSON 2",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `{"title": "Moana", }`,
+			want:   `{"error":"body contains badly-formed JSON (at character 20)"}`,
+			code:   http.StatusBadRequest,
+		},
+		{
+			name:   "create new movie empty body",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			want:   `{"error":"body must not be empty"}`,
+			code:   http.StatusBadRequest,
+		},
+		{
+			name:   "create new movie wrong JSON type",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `{"title": 123}`,
+			want:   `{"error":"body contains incorrect JSON type for field \"title\""}`,
+			code:   http.StatusBadRequest,
 		},
 		{
 			name:   "create new movie wrong method",
@@ -72,7 +106,7 @@ func TestMovies(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("%s", c.name), func(t *testing.T) {
-			req, err := http.NewRequest(c.method, ts.URL+c.path, nil)
+			req, err := http.NewRequest(c.method, ts.URL+c.path, strings.NewReader(c.body))
 			assertNoError(t, err)
 
 			resp, err := http.DefaultClient.Do(req)

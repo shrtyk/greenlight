@@ -46,6 +46,6 @@ func assertNoError(t testing.TB, err error) {
 
 func assertStrs(t testing.TB, got, want string) {
 	if got != want {
-		t.Errorf("\ngot:\n%v\nwant:\n%v", string(got), want)
+		t.Errorf("\ngot:\n%v\nwant:\n%v", got, want)
 	}
 }

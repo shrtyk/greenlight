@@ -2,8 +2,10 @@ package data
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 
+	"github.com/jackc/pgtype"
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
@@ -31,8 +33,42 @@ func (m MovieModel) Insert(movie *Movie) error {
 	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
-func (m MovieModel) Get(id int64) error {
-	return nil
+func (m MovieModel) Get(id int64) (*Movie, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+	movie := new(Movie)
+	query := `
+		SELECT id, created_at, title, year, runtime, genres, version
+		FROM movies
+		WHERE id = $1`
+
+	var genres pgtype.TextArray
+	err := m.DB.QueryRow(query, id).Scan(
+		&movie.ID,
+		&movie.CreatedAt,
+		&movie.Title,
+		&movie.Year,
+		&movie.Runtime,
+		&genres,
+		&movie.Version,
+	)
+
+	movie.Genres = make([]string, 0, len(genres.Elements))
+	for _, genre := range genres.Elements {
+		movie.Genres = append(movie.Genres, genre.String)
+	}
+
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return movie, nil
 }
 
 func (m MovieModel) Delete(id int64) error {

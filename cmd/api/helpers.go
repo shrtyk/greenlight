@@ -32,6 +32,8 @@ func (app *application) writeJson(w http.ResponseWriter, data envelope, status i
 	}
 
 	// Uncomment to add extra readability during manual testing:
+
+	// b = append(b, '\n')
 	// buf := bytes.Buffer{}
 	// if err := json.Indent(&buf, b, "", "\t"); err != nil {
 	// 	return err

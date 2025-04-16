@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/shortykevich/greenlight/internal/data"
 )
 
 const version = "1.0.0"
@@ -51,7 +52,8 @@ func main() {
 
 	app := newApplication().
 		setConfig(cfg).
-		setLogger(logger)
+		setLogger(logger).
+		setModels(data.NewModels(db))
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),

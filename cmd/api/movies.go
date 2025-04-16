@@ -36,8 +36,16 @@ func (app *application) createMoviehandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%+v\n", input)
+	err := app.models.Movies.Insert(movie)
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	headers := make(http.Header)
+	headers.Set("location", fmt.Sprintf("/v1/movies/%d", movie.ID))
+
+	app.writeJson(w, envelope{"movie": movie}, http.StatusCreated, headers)
 }
 
 func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {

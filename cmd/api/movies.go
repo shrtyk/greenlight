@@ -9,7 +9,20 @@ import (
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
-func (app *application) createMoviehandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) getMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	movies, err := app.models.Movies.GetAll()
+	if err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+
+	if err := app.writeJson(w, envelope{"movies": movies}, http.StatusOK, nil); err != nil {
+		app.serverErrorResponse(w, r, err)
+		return
+	}
+}
+
+func (app *application) createMovieHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Title   string       `json:"title"`
 		Year    int32        `json:"year"`
@@ -44,17 +57,19 @@ func (app *application) createMoviehandler(w http.ResponseWriter, r *http.Reques
 	headers := make(http.Header)
 	headers.Set("location", fmt.Sprintf("/v1/movies/%d", movie.ID))
 
-	app.writeJson(w, envelope{"movie": movie}, http.StatusCreated, headers)
+	if err := app.writeJson(w, envelope{"movie": movie}, http.StatusCreated, headers); err != nil {
+		app.serverErrorResponse(w, r, err)
+	}
 }
 
-func (app *application) showMovieHandler(w http.ResponseWriter, r *http.Request) {
+func (app *application) getMovieHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := app.readIDParam(r)
 	if err != nil {
 		app.notFoundResponse(w, r)
 		return
 	}
 
-	movie, err := app.models.Movies.Get(id)
+	movie, err := app.models.Movies.GetByID(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
@@ -77,7 +92,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	movie, err := app.models.Movies.Get(id)
+	movie, err := app.models.Movies.GetByID(id)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):

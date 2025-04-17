@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgtype"
@@ -10,13 +11,29 @@ import (
 )
 
 type Movie struct {
-	ID        int64     `json:"id"`
+	ID        int64     `json:"id,omitempty"`
 	CreatedAt time.Time `json:"-"`
-	Title     string    `json:"title"`
+	Title     string    `json:"title,omitempty"`
 	Year      int32     `json:"year,omitempty"`
 	Runtime   Runtime   `json:"runtime,omitempty"`
 	Genres    []string  `json:"genres,omitempty"`
-	Version   int32     `json:"version"`
+	Version   int32     `json:"version,omitempty"`
+}
+
+type MovieRepository interface {
+	MovieGetter
+	MovieMutator
+}
+
+type MovieMutator interface {
+	Insert(movie *Movie) error
+	Delete(id int64) error
+	Update(movie *Movie) error
+}
+
+type MovieGetter interface {
+	GetByID(id int64) (*Movie, error)
+	GetAll() ([]Movie, error)
 }
 
 type MovieModel struct {
@@ -33,7 +50,7 @@ func (m MovieModel) Insert(movie *Movie) error {
 	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
-func (m MovieModel) Get(id int64) (*Movie, error) {
+func (m MovieModel) GetByID(id int64) (*Movie, error) {
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
@@ -107,6 +124,88 @@ func (m MovieModel) Update(movie *Movie) error {
 	args := []any{movie.Title, movie.Year, movie.Runtime, movie.Genres, movie.ID}
 
 	return m.DB.QueryRow(query, args...).Scan(&movie.Version)
+}
+
+func (m MovieModel) GetAll() ([]Movie, error) {
+	query := `
+		SELECT title, year, runtime, genres
+		FROM movies`
+
+	rows, err := m.DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	movies := []Movie{}
+	var movie Movie
+	for rows.Next() {
+		rows.Scan(&movie.Title, &movie.Year, &movie.Runtime, &movie.Genres)
+		movies = append(movies, movie)
+	}
+	return movies, nil
+}
+
+type MovieInMemRepo struct {
+	mu        sync.Mutex
+	idCounter int64
+	movies    map[int64]Movie
+}
+
+func NewMovieMock() MovieRepository {
+	return &MovieInMemRepo{
+		idCounter: 1,
+		movies:    make(map[int64]Movie),
+	}
+}
+
+func (m *MovieInMemRepo) Insert(movie *Movie) error {
+	movie.ID = m.idCounter
+	m.movies[m.idCounter] = *movie
+	m.idCounter++
+	return nil
+}
+
+func (m *MovieInMemRepo) GetByID(id int64) (*Movie, error) {
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	movie, ok := m.movies[id]
+	if !ok {
+		return nil, ErrRecordNotFound
+	}
+	return &movie, nil
+}
+
+func (m *MovieInMemRepo) Delete(id int64) error {
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	if _, ok := m.movies[id]; !ok {
+		return ErrRecordNotFound
+	}
+
+	delete(m.movies, id)
+	return nil
+}
+func (m *MovieInMemRepo) Update(movie *Movie) error {
+	id := movie.ID
+	if _, ok := m.movies[id]; !ok {
+		return ErrRecordNotFound
+	}
+
+	m.movies[id] = *movie
+	return nil
+}
+
+func (m *MovieInMemRepo) GetAll() ([]Movie, error) {
+	moviesList := make([]Movie, 0, len(m.movies))
+	for _, v := range m.movies {
+		moviesList = append(moviesList, v)
+	}
+	return moviesList, nil
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {

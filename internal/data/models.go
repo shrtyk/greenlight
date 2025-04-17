@@ -11,7 +11,7 @@ var (
 
 // Wrapper for all API models
 type Models struct {
-	Movies MovieModel
+	Movies MovieRepository
 }
 
 func NewModels(db *sql.DB) Models {

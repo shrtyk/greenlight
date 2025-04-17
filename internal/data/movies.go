@@ -3,6 +3,7 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -149,19 +150,14 @@ func (m MovieModel) GetAll() ([]Movie, error) {
 type MovieInMemRepo struct {
 	mu        sync.Mutex
 	idCounter int64
-	movies    map[int64]Movie
-}
-
-func NewMovieMock() MovieRepository {
-	return &MovieInMemRepo{
-		idCounter: 1,
-		movies:    make(map[int64]Movie),
-	}
+	movies    map[int64]*Movie
 }
 
 func (m *MovieInMemRepo) Insert(movie *Movie) error {
 	movie.ID = m.idCounter
-	m.movies[m.idCounter] = *movie
+	movie.Version++
+
+	m.movies[m.idCounter] = movie
 	m.idCounter++
 	return nil
 }
@@ -175,7 +171,7 @@ func (m *MovieInMemRepo) GetByID(id int64) (*Movie, error) {
 	if !ok {
 		return nil, ErrRecordNotFound
 	}
-	return &movie, nil
+	return movie, nil
 }
 
 func (m *MovieInMemRepo) Delete(id int64) error {
@@ -196,15 +192,19 @@ func (m *MovieInMemRepo) Update(movie *Movie) error {
 		return ErrRecordNotFound
 	}
 
-	m.movies[id] = *movie
+	movie.Version = m.movies[id].Version + 1
+	m.movies[id] = movie
 	return nil
 }
 
 func (m *MovieInMemRepo) GetAll() ([]Movie, error) {
 	moviesList := make([]Movie, 0, len(m.movies))
 	for _, v := range m.movies {
-		moviesList = append(moviesList, v)
+		moviesList = append(moviesList, *v)
 	}
+	sort.Slice(moviesList, func(i, j int) bool {
+		return moviesList[i].ID < moviesList[j].ID
+	})
 	return moviesList, nil
 }
 

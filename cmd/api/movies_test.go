@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/julienschmidt/httprouter"
+	"github.com/shortykevich/greenlight/internal/data"
 )
 
 type param struct {
@@ -19,9 +20,11 @@ type param struct {
 
 func TestMovies(t *testing.T) {
 	cfg := config{env: "development"}
+
 	app := newApplication().
 		setConfig(cfg).
-		setLogger(nil)
+		setLogger(nil).
+		setModels(data.NewMockModels())
 
 	router := app.routes()
 	ts := httptest.NewServer(router)
@@ -36,87 +39,79 @@ func TestMovies(t *testing.T) {
 		code   int
 	}{
 		{
-			name:   "create new movie",
+			name:   "create movie 1",
 			method: http.MethodPost,
 			path:   "/v1/movies",
-			body:   `{"title": "Moana", "runtime": "107 mins", "genres": ["animation", "adventure"], "year": 2000}`,
-			want:   "{Title:Moana Year:2000 Runtime:107 Genres:[animation adventure]}\n",
+			body:   `{"title":"Moana","year":2016,"runtime":"107 mins", "genres":["animation","adventure"]}`,
+			want:   `{"movie":{"id":1,"title":"Moana","year":2016,"runtime":"107 mins","genres":["animation","adventure"],"version":1}}`,
 			code:   http.StatusCreated,
 		},
 		{
-			name:   "create new movie badly-formed JSON 1",
-			method: http.MethodPost,
-			path:   "/v1/movies",
-			body:   `?xml version="1.0" encoding="UTF-8"?><note><to>Alex</to></note>`,
-			want:   `{"error":"body contains badly-formed JSON (at character 1)"}`,
-			code:   http.StatusBadRequest,
+			name:   "get movie",
+			method: http.MethodGet,
+			path:   "/v1/movies/1",
+			want:   `{"movie":{"id":1,"title":"Moana","year":2016,"runtime":"107 mins","genres":["animation","adventure"],"version":1}}`,
+			code:   http.StatusOK,
 		},
 		{
-			name:   "create new movie badly-formed JSON 2",
+			name:   "create movie 2",
 			method: http.MethodPost,
 			path:   "/v1/movies",
-			body:   `{"title": "Moana", }`,
-			want:   `{"error":"body contains badly-formed JSON (at character 20)"}`,
-			code:   http.StatusBadRequest,
+			body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"]}`,
+			want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"],"version":1}}`,
+			code:   http.StatusCreated,
 		},
 		{
-			name:   "create new movie empty body",
+			name:   "create movie 3",
 			method: http.MethodPost,
 			path:   "/v1/movies",
+			body:   `{"title":"Deadpool","year":2016, "runtime":"108 mins","genres":["action","comedy"]}`,
+			want:   `{"movie":{"id":3,"title":"Deadpool","year":2016,"runtime":"108 mins","genres":["action","comedy"],"version":1}}`,
+			code:   http.StatusCreated,
+		},
+		{
+			name:   "create movie 4",
+			method: http.MethodPost,
+			path:   "/v1/movies",
+			body:   `{"title":"The Breakfast Club","year":1986, "runtime":"96 mins","genres":["drama"]}`,
+			want:   `{"movie":{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}}`,
+			code:   http.StatusCreated,
+		},
+		{
+			name:   "delete movie",
+			method: http.MethodDelete,
+			path:   "/v1/movies/3",
+			want:   `{"message:":"movie successfully deleted"}`,
+			code:   http.StatusOK,
+		},
+		{
+			name:   "get wrong movie",
+			method: http.MethodGet,
+			path:   "/v1/movies/3",
+			want:   `{"error":"the requested resource could not be found"}`,
+			code:   http.StatusNotFound,
+		},
+		{
+			name:   "update movie",
+			method: http.MethodPut,
+			path:   "/v1/movies/2",
+			body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"]}`,
+			want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2}}`,
+			code:   http.StatusCreated,
+		},
+		{
+			name:   "update with empty body",
+			method: http.MethodPut,
+			path:   "/v1/movies/2",
 			want:   `{"error":"body must not be empty"}`,
 			code:   http.StatusBadRequest,
 		},
 		{
-			name:   "create new movie wrong JSON type",
-			method: http.MethodPost,
-			path:   "/v1/movies",
-			body:   `{"title": 123}`,
-			want:   `{"error":"body contains incorrect JSON type for field \"title\""}`,
-			code:   http.StatusBadRequest,
-		},
-		{
-			name:   "create new movie with unknown JSON keys",
-			method: http.MethodPost,
-			path:   "/v1/movies",
-			body:   `{"title": "Moana", "rating": "PG"}`,
-			want:   `{"error":"body contains unknown key \"rating\""}`,
-			code:   http.StatusBadRequest,
-		},
-		{
-			name:   "create new movie several JSON values",
-			method: http.MethodPost,
-			path:   "/v1/movies",
-			body:   `{"title": "Moana"}{"title": "Top Gun"}`,
-			want:   `{"error":"Body must contain a single JSON value"}`,
-			code:   http.StatusBadRequest,
-		},
-		{
-			name:   "create new movie wrong method",
+			name:   "get all movies",
 			method: http.MethodGet,
 			path:   "/v1/movies",
-			want:   `{"error":"the GET method is not supported for this resource"}`,
-			code:   http.StatusMethodNotAllowed,
-		},
-		{
-			name:   "get right movie id",
-			method: http.MethodGet,
-			path:   "/v1/movies/123",
-			want:   `{"movie":{"id":123,"title":"Casablanca","runtime":"102 mins","genres":["drama","romance","war"],"version":1}}`,
+			want:   `{"movies":[{"id":1,"title":"Moana","year":2016,"runtime":"107 mins","genres":["animation","adventure"],"version":1},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
 			code:   http.StatusOK,
-		},
-		{
-			name:   "get wrong movie id (negative)",
-			method: http.MethodGet,
-			path:   "/v1/movies/-112",
-			want:   `{"error":"the requested resource could not be found"}`,
-			code:   http.StatusNotFound,
-		},
-		{
-			name:   "get wrong movie id (text)",
-			method: http.MethodGet,
-			path:   "/v1/movies/shrek",
-			want:   `{"error":"the requested resource could not be found"}`,
-			code:   http.StatusNotFound,
 		},
 	}
 

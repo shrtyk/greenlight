@@ -19,3 +19,11 @@ func NewModels(db *sql.DB) Models {
 		Movies: MovieModel{DB: db},
 	}
 }
+
+func NewMockModels() Models {
+	return Models{
+		Movies: &MovieInMemRepo{
+			idCounter: 1,
+			movies:    make(map[int64]*Movie),
+		}}
+}

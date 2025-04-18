@@ -12,8 +12,13 @@ import (
 func (app *application) getMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	movies, err := app.models.Movies.GetAll()
 	if err != nil {
-		app.serverErrorResponse(w, r, err)
-		return
+		switch {
+		case errors.Is(err, data.ErrCloseRows):
+			app.logError(r, err)
+		default:
+			app.serverErrorResponse(w, r, err)
+			return
+		}
 	}
 
 	if err := app.writeJson(w, envelope{"movies": movies}, http.StatusOK, nil); err != nil {

@@ -1,22 +1,14 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/julienschmidt/httprouter"
 	"github.com/shortykevich/greenlight/internal/data"
 )
-
-type param struct {
-	key string
-	val string
-}
 
 func TestMovies(t *testing.T) {
 	cfg := config{env: "development"}
@@ -124,13 +116,15 @@ func TestMovies(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		t.Run(fmt.Sprintf("%s", c.name), func(t *testing.T) {
+		t.Run(c.name, func(t *testing.T) {
 			req, err := http.NewRequest(c.method, ts.URL+c.path, strings.NewReader(c.body))
 			assertNoError(t, err)
 
 			resp, err := http.DefaultClient.Do(req)
 			assertNoError(t, err)
-			defer resp.Body.Close()
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
 
 			got, err := io.ReadAll(resp.Body)
 
@@ -146,11 +140,4 @@ func assertStatusCode(t testing.TB, got, want int) {
 	if got != want {
 		t.Errorf("got status %v, want status %v", got, want)
 	}
-}
-
-func withRouterParams(req *http.Request, key, value string) *http.Request {
-	routerParams := httprouter.Params{
-		httprouter.Param{Key: key, Value: value},
-	}
-	return req.WithContext(context.WithValue(req.Context(), httprouter.ParamsKey, routerParams))
 }

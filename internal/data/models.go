@@ -8,6 +8,7 @@ import (
 var (
 	ErrRecordNotFound = errors.New("record not found")
 	ErrEditConflict   = errors.New("edit conflict")
+	ErrCloseRows      = errors.New("couldn't close rows")
 )
 
 // Wrapper for all API models

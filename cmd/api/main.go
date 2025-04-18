@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -42,18 +41,24 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	db, err := openDB(cfg)
+	app := newApplication().
+		setConfig(cfg).
+		setLogger(logger)
+
+	db, err := app.openPostgresDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("couldn't close database", "err", err)
+			os.Exit(1)
+		}
+	}()
 	logger.Info("database connection pool established")
 
-	app := newApplication().
-		setConfig(cfg).
-		setLogger(logger).
-		setModels(data.NewModels(db))
+	app.setModels(data.NewModels(db))
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.port),
@@ -67,25 +72,4 @@ func main() {
 	err = server.ListenAndServe()
 	app.logger.Error(err.Error())
 	os.Exit(1)
-}
-
-func openDB(cfg config) (*sql.DB, error) {
-	db, err := sql.Open("pgx", cfg.db.dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	db.SetMaxOpenConns(cfg.db.maxOpenConns)
-	db.SetMaxIdleConns(cfg.db.maxIdleConns)
-	db.SetConnMaxIdleTime(cfg.db.maxIdleTime)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	if err = db.PingContext(ctx); err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	return db, nil
 }

@@ -43,7 +43,10 @@ func (app *application) writeJson(w http.ResponseWriter, data envelope, status i
 	maps.Copy(w.Header(), headers)
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(status)
-	w.Write(b)
+
+	if _, err = w.Write(b); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -88,7 +91,7 @@ func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any
 
 	if err := dec.Decode(&struct{}{}); err != nil {
 		if !errors.Is(err, io.EOF) {
-			return errors.New("Body must contain a single JSON value")
+			return errors.New("body must contain a single JSON value")
 		}
 	}
 	return nil

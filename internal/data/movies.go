@@ -3,8 +3,8 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/jackc/pgtype"
@@ -145,19 +145,31 @@ func (m MovieModel) GetAll() ([]Movie, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() {
+		if cerr := rows.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("%w: %v", ErrCloseRows, cerr)
+		}
+	}()
 
 	movies := []Movie{}
 	var movie Movie
 	for rows.Next() {
-		rows.Scan(&movie.Title, &movie.Year, &movie.Runtime, &movie.Genres)
+		err := rows.Scan(&movie.Title, &movie.Year, &movie.Runtime, &movie.Genres)
+		if err != nil {
+			return nil, err
+		}
 		movies = append(movies, movie)
 	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
 	return movies, nil
 }
 
 type MovieInMemRepo struct {
-	mu        sync.Mutex
+	// mu        sync.Mutex
 	idCounter int64
 	movies    map[int64]*Movie
 }

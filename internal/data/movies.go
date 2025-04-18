@@ -1,6 +1,7 @@
 package data
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,16 +11,6 @@ import (
 	"github.com/jackc/pgtype"
 	"github.com/shortykevich/greenlight/internal/validator"
 )
-
-type Movie struct {
-	ID        int64     `json:"id,omitempty"`
-	CreatedAt time.Time `json:"-"`
-	Title     string    `json:"title,omitempty"`
-	Year      int32     `json:"year,omitempty"`
-	Runtime   Runtime   `json:"runtime,omitempty"`
-	Genres    []string  `json:"genres,omitempty"`
-	Version   int32     `json:"version,omitempty"`
-}
 
 type MovieRepository interface {
 	MovieGetter
@@ -37,6 +28,33 @@ type MovieGetter interface {
 	GetAll() ([]Movie, error)
 }
 
+type Movie struct {
+	ID        int64     `json:"id,omitempty"`
+	CreatedAt time.Time `json:"-"`
+	Title     string    `json:"title,omitempty"`
+	Year      int32     `json:"year,omitempty"`
+	Runtime   Runtime   `json:"runtime,omitempty"`
+	Genres    Genres    `json:"genres,omitempty"`
+	Version   int32     `json:"version,omitempty"`
+}
+
+type Genres []string
+
+func (g *Genres) Scan(src any) error {
+	var arr pgtype.TextArray
+	if err := arr.Scan(src); err != nil {
+		return err
+	}
+
+	genres := make([]string, len(arr.Elements))
+	for i, el := range arr.Elements {
+		genres[i] = el.String
+	}
+
+	*g = genres
+	return nil
+}
+
 type MovieModel struct {
 	DB *sql.DB
 }
@@ -48,7 +66,10 @@ func (m MovieModel) Insert(movie *Movie) error {
 		RETURNING id, created_at, version`
 	args := []any{movie.Title, movie.Year, movie.Runtime, movie.Genres}
 
-	return m.DB.QueryRow(query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	return m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.ID, &movie.CreatedAt, &movie.Version)
 }
 
 func (m MovieModel) GetByID(id int64) (*Movie, error) {
@@ -57,26 +78,23 @@ func (m MovieModel) GetByID(id int64) (*Movie, error) {
 	}
 	movie := new(Movie)
 	query := `
-		SELECT id, created_at, title, year, runtime, genres, version
+		SELECT pg_sleep(5), id, created_at, title, year, runtime, genres, version
 		FROM movies
 		WHERE id = $1`
 
-	var genres pgtype.TextArray
-	err := m.DB.QueryRow(query, id).Scan(
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+		&[]byte{},
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
 		&movie.Year,
 		&movie.Runtime,
-		&genres,
+		&movie.Genres,
 		&movie.Version,
 	)
-
-	movie.Genres = make([]string, 0, len(genres.Elements))
-	for _, genre := range genres.Elements {
-		movie.Genres = append(movie.Genres, genre.String)
-	}
-
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -98,7 +116,10 @@ func (m MovieModel) Delete(id int64) error {
 		DELETE FROM movies
 		WHERE id = $1`
 
-	res, err := m.DB.Exec(query, id)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	res, err := m.DB.ExecContext(ctx, query, id)
 	if err != nil {
 		return err
 	}
@@ -124,7 +145,10 @@ func (m MovieModel) Update(movie *Movie) error {
 
 	args := []any{movie.Title, movie.Year, movie.Runtime, movie.Genres, movie.ID, movie.Version}
 
-	if err := m.DB.QueryRow(query, args...).Scan(&movie.Version); err != nil {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := m.DB.QueryRowContext(ctx, query, args...).Scan(&movie.Version); err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 			return ErrEditConflict
@@ -158,6 +182,7 @@ func (m MovieModel) GetAll() ([]Movie, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		movies = append(movies, movie)
 	}
 

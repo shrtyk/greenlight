@@ -93,7 +93,7 @@ func TestMovies(t *testing.T) {
 		},
 		{
 			name:   "update movie",
-			method: http.MethodPut,
+			method: http.MethodPatch,
 			path:   "/v1/movies/2",
 			body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"]}`,
 			want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2}}`,
@@ -101,16 +101,24 @@ func TestMovies(t *testing.T) {
 		},
 		{
 			name:   "update with empty body",
-			method: http.MethodPut,
+			method: http.MethodPatch,
 			path:   "/v1/movies/2",
 			want:   `{"error":"body must not be empty"}`,
 			code:   http.StatusBadRequest,
 		},
 		{
+			name:   "partial update",
+			method: http.MethodPatch,
+			path:   "/v1/movies/1",
+			body:   `{"year":2000}`,
+			want:   `{"movie":{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2}}`,
+			code:   http.StatusCreated,
+		},
+		{
 			name:   "get all movies",
 			method: http.MethodGet,
 			path:   "/v1/movies",
-			want:   `{"movies":[{"id":1,"title":"Moana","year":2016,"runtime":"107 mins","genres":["animation","adventure"],"version":1},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
+			want:   `{"movies":[{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
 			code:   http.StatusOK,
 		},
 	}

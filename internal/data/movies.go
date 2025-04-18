@@ -25,7 +25,7 @@ type MovieMutator interface {
 
 type MovieGetter interface {
 	GetByID(id int64) (*Movie, error)
-	GetAll() ([]Movie, error)
+	GetAll(title string, genres Genres, filters Filters) ([]*Movie, error)
 }
 
 type Movie struct {
@@ -78,7 +78,7 @@ func (m MovieModel) GetByID(id int64) (*Movie, error) {
 	}
 	movie := new(Movie)
 	query := `
-		SELECT pg_sleep(5), id, created_at, title, year, runtime, genres, version
+		SELECT id, created_at, title, year, runtime, genres, version
 		FROM movies
 		WHERE id = $1`
 
@@ -86,7 +86,6 @@ func (m MovieModel) GetByID(id int64) (*Movie, error) {
 	defer cancel()
 
 	err := m.DB.QueryRowContext(ctx, query, id).Scan(
-		&[]byte{},
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
@@ -160,34 +159,51 @@ func (m MovieModel) Update(movie *Movie) error {
 	return nil
 }
 
-func (m MovieModel) GetAll() ([]Movie, error) {
+func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Movie, error) {
 	query := `
-		SELECT title, year, runtime, genres
-		FROM movies`
+		SELECT created_at, title, year, runtime, genres, version
+		FROM movies
+		ORDER BY id`
 
-	rows, err := m.DB.Query(query)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	rows, err := m.DB.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
-		if cerr := rows.Close(); cerr != nil && err == nil {
-			err = fmt.Errorf("%w: %v", ErrCloseRows, cerr)
+		cerr := rows.Close()
+		if cerr != nil {
+			if err != nil {
+				err = fmt.Errorf("%w: %v", err, cerr)
+			} else {
+				err = fmt.Errorf("%w: %v", ErrCloseRows, cerr)
+			}
 		}
 	}()
 
-	movies := []Movie{}
-	var movie Movie
+	movies := []*Movie{}
 	for rows.Next() {
-		err := rows.Scan(&movie.Title, &movie.Year, &movie.Runtime, &movie.Genres)
+		var movie Movie
+
+		err := rows.Scan(
+			&movie.CreatedAt,
+			&movie.Title,
+			&movie.Year,
+			&movie.Runtime,
+			&movie.Genres,
+			&movie.Version,
+		)
 		if err != nil {
 			return nil, err
 		}
 
-		movies = append(movies, movie)
+		movies = append(movies, &movie)
 	}
 
-	if rows.Err() != nil {
-		return nil, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return movies, nil
@@ -243,10 +259,11 @@ func (m *MovieInMemRepo) Update(movie *Movie) error {
 	return nil
 }
 
-func (m *MovieInMemRepo) GetAll() ([]Movie, error) {
-	moviesList := make([]Movie, 0, len(m.movies))
+func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, error) {
+	moviesList := make([]*Movie, 0, len(m.movies))
 	for _, v := range m.movies {
-		moviesList = append(moviesList, *v)
+		movie := v
+		moviesList = append(moviesList, movie)
 	}
 	sort.Slice(moviesList, func(i, j int) bool {
 		return moviesList[i].ID < moviesList[j].ID

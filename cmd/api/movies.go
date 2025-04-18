@@ -5,12 +5,36 @@ import (
 	"fmt"
 	"net/http"
 
-	data "github.com/shortykevich/greenlight/internal/data"
+	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
-func (app *application) getMoviesHandler(w http.ResponseWriter, r *http.Request) {
-	movies, err := app.models.Movies.GetAll()
+func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Title  string
+		Genres data.Genres
+		data.Filters
+	}
+
+	v := validator.New()
+
+	qs := r.URL.Query()
+
+	input.Title = app.readString(qs, "title", "")
+	input.Genres = app.readCSV(qs, "genres", data.Genres{})
+
+	input.Filters.Page = app.readInt(qs, "page", 1, v)
+	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.Filters.Sort = app.readString(qs, "sort", "id")
+
+	input.Filters.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
+
+	if input.Filters.Validate(v); !v.Valid() {
+		app.failedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrCloseRows):
@@ -23,7 +47,6 @@ func (app *application) getMoviesHandler(w http.ResponseWriter, r *http.Request)
 
 	if err := app.writeJson(w, envelope{"movies": movies}, http.StatusOK, nil); err != nil {
 		app.serverErrorResponse(w, r, err)
-		return
 	}
 }
 

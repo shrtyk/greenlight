@@ -110,7 +110,7 @@ func TestMovies(t *testing.T) {
 			name:   "get all movies",
 			method: http.MethodGet,
 			path:   "/v1/movies",
-			want:   `{"movies":[{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
+			want:   `{"metadata":{},"movies":[{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
 			code:   http.StatusOK,
 		},
 	}

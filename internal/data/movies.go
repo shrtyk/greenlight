@@ -25,7 +25,7 @@ type MovieMutator interface {
 
 type MovieGetter interface {
 	GetByID(id int64) (*Movie, error)
-	GetAll(title string, genres Genres, filters Filters) ([]*Movie, error)
+	GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error)
 }
 
 type Movie struct {
@@ -159,20 +159,23 @@ func (m MovieModel) Update(movie *Movie) error {
 	return nil
 }
 
-func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Movie, error) {
+func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
 	query := fmt.Sprintf(`
-		SELECT created_at, title, year, runtime, genres, version
+		SELECT COUNT(*) OVER(), id, created_at, title, year, runtime, genres, version
 		FROM movies
 		WHERE (to_tsvector('simple', title) @@ plainto_tsquery('simple', $1) OR $1 = '')
 		AND (genres @> $2 OR $2 = '{}')
-		ORDER BY %s %s, id ASC`, filters.sortColumn(), filters.sortDirection())
+		ORDER BY %s %s, id ASC
+		LIMIT $3 OFFSET $4`, filters.sortColumn(), filters.sortDirection())
+
+	args := []any{title, genres, filters.limit(), filters.offset()}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	rows, err := m.DB.QueryContext(ctx, query, title, genres)
+	rows, err := m.DB.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 	defer func() {
 		cerr := rows.Close()
@@ -186,10 +189,13 @@ func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Mov
 	}()
 
 	movies := []*Movie{}
+	totalRecords := 0
 	for rows.Next() {
 		var movie Movie
 
 		err := rows.Scan(
+			&totalRecords,
+			&movie.ID,
 			&movie.CreatedAt,
 			&movie.Title,
 			&movie.Year,
@@ -198,17 +204,19 @@ func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Mov
 			&movie.Version,
 		)
 		if err != nil {
-			return nil, err
+			return nil, Metadata{}, err
 		}
 
 		movies = append(movies, &movie)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, Metadata{}, err
 	}
 
-	return movies, nil
+	metadata := calculateMetadata(totalRecords, filters.Page, filters.PageSize)
+
+	return movies, metadata, nil
 }
 
 type MovieInMemRepo struct {
@@ -261,7 +269,7 @@ func (m *MovieInMemRepo) Update(movie *Movie) error {
 	return nil
 }
 
-func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, error) {
+func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
 	moviesList := make([]*Movie, 0, len(m.movies))
 	for _, v := range m.movies {
 		movie := v
@@ -270,7 +278,7 @@ func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([
 	sort.Slice(moviesList, func(i, j int) bool {
 		return moviesList[i].ID < moviesList[j].ID
 	})
-	return moviesList, nil
+	return moviesList, Metadata{}, nil
 }
 
 func ValidateMovie(v *validator.Validator, movie *Movie) {

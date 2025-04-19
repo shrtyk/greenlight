@@ -34,7 +34,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	movies, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
+	movies, metadata, err := app.models.Movies.GetAll(input.Title, input.Genres, input.Filters)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrCloseRows):
@@ -45,7 +45,7 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	if err := app.writeJson(w, envelope{"movies": movies}, http.StatusOK, nil); err != nil {
+	if err := app.writeJson(w, envelope{"movies": movies, "metadata": metadata}, http.StatusOK, nil); err != nil {
 		app.serverErrorResponse(w, r, err)
 	}
 }

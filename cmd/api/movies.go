@@ -23,13 +23,13 @@ func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request
 	input.Title = app.readString(qs, "title", "")
 	input.Genres = app.readCSV(qs, "genres", data.Genres{})
 
-	input.Filters.Page = app.readInt(qs, "page", 1, v)
-	input.Filters.PageSize = app.readInt(qs, "page_size", 20, v)
-	input.Filters.Sort = app.readString(qs, "sort", "id")
+	input.Page = app.readInt(qs, "page", 1, v)
+	input.PageSize = app.readInt(qs, "page_size", 20, v)
+	input.Sort = app.readString(qs, "sort", "id")
 
-	input.Filters.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
+	input.SortSafelist = []string{"id", "title", "year", "runtime", "-id", "-title", "-year", "-runtime"}
 
-	if input.Filters.Validate(v); !v.Valid() {
+	if input.Validate(v); !v.Valid() {
 		app.failedValidationResponse(w, r, v.Errors)
 		return
 	}

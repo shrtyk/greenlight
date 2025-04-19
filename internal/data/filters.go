@@ -1,6 +1,11 @@
 package data
 
-import "github.com/shortykevich/greenlight/internal/validator"
+import (
+	"slices"
+	"strings"
+
+	"github.com/shortykevich/greenlight/internal/validator"
+)
 
 type Filters struct {
 	Page         int
@@ -16,4 +21,18 @@ func (f Filters) Validate(v *validator.Validator) {
 	v.Check(f.PageSize <= 100, "page_size", "must be maximum of 100")
 
 	v.Check(validator.PermittedValue(f.Sort, f.SortSafelist...), "sort", "invalid sort value")
+}
+
+func (f Filters) sortColumn() string {
+	if slices.Contains(f.SortSafelist, f.Sort) {
+		return strings.TrimPrefix(f.Sort, "-")
+	}
+	panic("unsafe sort parameter: " + f.Sort)
+}
+
+func (f Filters) sortDirection() string {
+	if strings.HasPrefix(f.Sort, "-") {
+		return "DESC"
+	}
+	return "ASC"
 }

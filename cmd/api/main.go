@@ -51,8 +51,6 @@ func main() {
 		setLogger(logger).
 		setRateLimiter(rateLimiter)
 
-	go rateLimiter.innactiveClientsCleanUp()
-
 	db, err := app.openPostgresDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())

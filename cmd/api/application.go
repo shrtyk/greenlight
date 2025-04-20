@@ -15,7 +15,7 @@ type application struct {
 	config  config
 	logger  *slog.Logger
 	models  data.Models
-	limiter *rateLimiter
+	limiter RateLimiter
 }
 
 func newApplication() *application {
@@ -37,7 +37,7 @@ func (app *application) setModels(models data.Models) *application {
 	return app
 }
 
-func (app *application) setRateLimiter(limiter *rateLimiter) *application {
+func (app *application) setRateLimiter(limiter RateLimiter) *application {
 	app.limiter = limiter
 	return app
 }
@@ -62,6 +62,11 @@ func (app *application) openPostgresDB(cfg config) (*sql.DB, error) {
 	return db, nil
 }
 
+type RateLimiter interface {
+	Allow(ip string) bool
+	IsEnabled() bool
+}
+
 type rateLimiter struct {
 	cfg     rateLimiterCfg
 	mu      sync.Mutex
@@ -80,10 +85,44 @@ type client struct {
 }
 
 func NewRateLimiter(cfg rateLimiterCfg) *rateLimiter {
-	return &rateLimiter{
+	rl := &rateLimiter{
 		cfg:     cfg,
 		clients: make(map[string]*client),
 	}
+	go rl.inactiveClientsCleanup()
+	return rl
+}
+
+func (r *rateLimiter) inactiveClientsCleanup() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		r.mu.Lock()
+		for ip, c := range r.clients {
+			if time.Since(c.lastSeen) > 3*time.Minute {
+				delete(r.clients, ip)
+			}
+		}
+		r.mu.Unlock()
+	}
+}
+
+func (r *rateLimiter) Allow(ip string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	c, ok := r.clients[ip]
+	if !ok {
+		c = &client{
+			limiter:  rate.NewLimiter(r.getRPS(), r.getBurst()),
+			lastSeen: time.Now(),
+		}
+		r.clients[ip] = c
+	}
+
+	c.lastSeen = time.Now()
+
+	return c.limiter.Allow()
 }
 
 func (r *rateLimiter) getRPS() rate.Limit {
@@ -94,20 +133,6 @@ func (r *rateLimiter) getBurst() int {
 	return r.cfg.rateBurst
 }
 
-func (r *rateLimiter) isEnabled() bool {
+func (r *rateLimiter) IsEnabled() bool {
 	return r.cfg.rateLimitEnabled
-}
-
-func (r *rateLimiter) innactiveClientsCleanUp() {
-	for {
-		time.Sleep(time.Minute)
-
-		r.mu.Lock()
-		for ip, client := range r.clients {
-			if time.Since(client.lastSeen) > 3*time.Minute {
-				delete(r.clients, ip)
-			}
-		}
-		r.mu.Unlock()
-	}
 }

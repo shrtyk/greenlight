@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -129,4 +130,18 @@ func (app *application) readInt(qs url.Values, key string, defaultValue int, v *
 	}
 
 	return n
+}
+
+func (app *application) clientIP(r *http.Request) (string, error) {
+	if ip := r.Header.Get("X-Real-IP"); ip != "" {
+		return ip, nil
+	}
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		return strings.Split(fwd, ",")[0], nil
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return "", err
+	}
+	return host, nil
 }

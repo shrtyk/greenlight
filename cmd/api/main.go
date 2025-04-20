@@ -29,6 +29,7 @@ type config struct {
 
 func main() {
 	var cfg config
+	var rlCfg rateLimiterCfg
 
 	flag.IntVar(&cfg.port, "port", 4000, "Api server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
@@ -36,14 +37,21 @@ func main() {
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+	flag.Float64Var(&rlCfg.ratePerSecond, "rps-limit", 2, "Requests per second limit")
+	flag.IntVar(&rlCfg.rateBurst, "req-burst-limit", 4, "Max amount of 'burst' requests")
+	flag.BoolVar(&rlCfg.rateLimitEnabled, "limiter-on", true, "Limiter on/off")
 
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	rateLimiter := NewRateLimiter(rlCfg)
 
 	app := newApplication().
 		setConfig(cfg).
-		setLogger(logger)
+		setLogger(logger).
+		setRateLimiter(rateLimiter)
+
+	go rateLimiter.innactiveClientsCleanUp()
 
 	db, err := app.openPostgresDB(cfg)
 	if err != nil {

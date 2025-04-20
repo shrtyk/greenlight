@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -20,12 +21,34 @@ func (app *application) applyMiddlewares(h http.Handler, mws ...func(http.Handle
 }
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
-	limiter := rate.NewLimiter(2, 4)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !limiter.Allow() {
+		if !app.limiter.isEnabled() {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		ip, err := app.clientIP(r)
+		if err != nil {
+			app.serverErrorResponse(w, r, err)
+			return
+		}
+
+		app.limiter.mu.Lock()
+		if _, ok := app.limiter.clients[ip]; !ok {
+			app.limiter.clients[ip] = &client{
+				limiter: rate.NewLimiter(app.limiter.getRPS(), app.limiter.getBurst()),
+			}
+		}
+
+		app.limiter.clients[ip].lastSeen = time.Now()
+
+		if !app.limiter.clients[ip].limiter.Allow() {
+			app.limiter.mu.Unlock()
 			app.rateLimitExceededResponse(w, r)
 			return
 		}
+		app.limiter.mu.Unlock()
+
 		next.ServeHTTP(w, r)
 	})
 }

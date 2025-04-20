@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgtype"
@@ -219,68 +220,6 @@ func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Mov
 	return movies, metadata, nil
 }
 
-type MovieInMemRepo struct {
-	// mu        sync.Mutex
-	idCounter int64
-	movies    map[int64]*Movie
-}
-
-func (m *MovieInMemRepo) Insert(movie *Movie) error {
-	movie.ID = m.idCounter
-	movie.Version++
-
-	m.movies[m.idCounter] = movie
-	m.idCounter++
-	return nil
-}
-
-func (m *MovieInMemRepo) GetByID(id int64) (*Movie, error) {
-	if id < 1 {
-		return nil, ErrRecordNotFound
-	}
-
-	movie, ok := m.movies[id]
-	if !ok {
-		return nil, ErrRecordNotFound
-	}
-	return movie, nil
-}
-
-func (m *MovieInMemRepo) Delete(id int64) error {
-	if id < 1 {
-		return ErrRecordNotFound
-	}
-
-	if _, ok := m.movies[id]; !ok {
-		return ErrRecordNotFound
-	}
-
-	delete(m.movies, id)
-	return nil
-}
-func (m *MovieInMemRepo) Update(movie *Movie) error {
-	id := movie.ID
-	if _, ok := m.movies[id]; !ok {
-		return ErrRecordNotFound
-	}
-
-	movie.Version = m.movies[id].Version + 1
-	m.movies[id] = movie
-	return nil
-}
-
-func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
-	moviesList := make([]*Movie, 0, len(m.movies))
-	for _, v := range m.movies {
-		movie := v
-		moviesList = append(moviesList, movie)
-	}
-	sort.Slice(moviesList, func(i, j int) bool {
-		return moviesList[i].ID < moviesList[j].ID
-	})
-	return moviesList, Metadata{}, nil
-}
-
 func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(movie.Title != "", "title", "must be provided")
 	v.Check(len(movie.Title) <= 500, "title", "must not be more than 500 bytes long")
@@ -297,4 +236,82 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 	v.Check(len(movie.Genres) <= 5, "genres", "must not contain more than 5 genres")
 
 	v.Check(validator.Unique(movie.Genres), "genres", "must not contain duplicate values")
+}
+
+type MovieInMemRepo struct {
+	mu        sync.RWMutex
+	idCounter int64
+	movies    map[int64]*Movie
+}
+
+func (m *MovieInMemRepo) Insert(movie *Movie) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	movie.ID = m.idCounter
+	movie.Version++
+
+	m.movies[m.idCounter] = movie
+	m.idCounter++
+	return nil
+}
+
+func (m *MovieInMemRepo) GetByID(id int64) (*Movie, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	if id < 1 {
+		return nil, ErrRecordNotFound
+	}
+
+	movie, ok := m.movies[id]
+	if !ok {
+		return nil, ErrRecordNotFound
+	}
+	return movie, nil
+}
+
+func (m *MovieInMemRepo) Delete(id int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if id < 1 {
+		return ErrRecordNotFound
+	}
+
+	if _, ok := m.movies[id]; !ok {
+		return ErrRecordNotFound
+	}
+
+	delete(m.movies, id)
+	return nil
+}
+
+func (m *MovieInMemRepo) Update(movie *Movie) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	id := movie.ID
+	if _, ok := m.movies[id]; !ok {
+		return ErrRecordNotFound
+	}
+
+	movie.Version = m.movies[id].Version + 1
+	m.movies[id] = movie
+	return nil
+}
+
+func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	moviesList := make([]*Movie, 0, len(m.movies))
+	for _, v := range m.movies {
+		movie := v
+		moviesList = append(moviesList, movie)
+	}
+	sort.Slice(moviesList, func(i, j int) bool {
+		return moviesList[i].ID < moviesList[j].ID
+	})
+	return moviesList, Metadata{}, nil
 }

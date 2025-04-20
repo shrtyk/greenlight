@@ -74,9 +74,9 @@ type rateLimiter struct {
 }
 
 type rateLimiterCfg struct {
-	rateLimitEnabled bool
-	ratePerSecond    float64
-	rateBurst        int
+	enable bool
+	rps    float64
+	burst  int
 }
 
 type client struct {
@@ -84,7 +84,7 @@ type client struct {
 	lastSeen time.Time
 }
 
-func NewRateLimiter(cfg rateLimiterCfg) *rateLimiter {
+func NewRateLimiter(cfg rateLimiterCfg) RateLimiter {
 	rl := &rateLimiter{
 		cfg:     cfg,
 		clients: make(map[string]*client),
@@ -126,13 +126,27 @@ func (r *rateLimiter) Allow(ip string) bool {
 }
 
 func (r *rateLimiter) getRPS() rate.Limit {
-	return rate.Limit(r.cfg.ratePerSecond)
+	return rate.Limit(r.cfg.rps)
 }
 
 func (r *rateLimiter) getBurst() int {
-	return r.cfg.rateBurst
+	return r.cfg.burst
 }
 
 func (r *rateLimiter) IsEnabled() bool {
-	return r.cfg.rateLimitEnabled
+	return r.cfg.enable
+}
+
+type MockLimiter struct{}
+
+func NewMockLimiter() RateLimiter {
+	return &MockLimiter{}
+}
+
+func (m *MockLimiter) Allow(ip string) bool {
+	return true
+}
+
+func (m *MockLimiter) IsEnabled() bool {
+	return false
 }

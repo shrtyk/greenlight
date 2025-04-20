@@ -12,13 +12,12 @@ import (
 
 func TestMovies(t *testing.T) {
 	cfg := config{env: "development"}
-	rlCfg := rateLimiterCfg{rateLimitEnabled: false}
 
 	app := newApplication().
 		setConfig(cfg).
 		setLogger(nil).
 		setModels(data.NewMockModels()).
-		setRateLimiter(NewRateLimiter(rlCfg))
+		setRateLimiter(NewMockLimiter())
 
 	router := app.routes()
 	ts := httptest.NewServer(router)

@@ -1,11 +1,8 @@
 package main
 
 import (
-	"context"
 	"flag"
-	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"time"
 
@@ -66,16 +63,8 @@ func main() {
 
 	app.setModels(data.NewModels(db))
 
-	server := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.port),
-		Handler:      app.routes(),
-		IdleTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	if err := app.server(); err != nil {
+		app.logger.Error(err.Error())
+		os.Exit(1)
 	}
-
-	app.logger.Log(context.Background(), slog.LevelInfo, "starting server", "addr", server.Addr, "env", cfg.env)
-	err = server.ListenAndServe()
-	app.logger.Error(err.Error())
-	os.Exit(1)
 }

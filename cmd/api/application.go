@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"maps"
 	"sync"
 	"time"
 
@@ -68,9 +69,10 @@ type RateLimiter interface {
 }
 
 type rateLimiter struct {
-	cfg     rateLimiterCfg
-	mu      sync.Mutex
-	clients map[string]*client
+	cfg          rateLimiterCfg
+	mu           sync.Mutex
+	clients      map[string]*client
+	rebuilded_at time.Time
 }
 
 type rateLimiterCfg struct {
@@ -89,8 +91,24 @@ func NewRateLimiter(cfg rateLimiterCfg) RateLimiter {
 		cfg:     cfg,
 		clients: make(map[string]*client),
 	}
+	rl.rebuilded_at = time.Now()
+
+	go rl.rebuildClientMap()
 	go rl.inactiveClientsCleanup()
+
 	return rl
+}
+
+func (r *rateLimiter) rebuildClientMap() {
+	ticker := time.NewTicker(6 * time.Hour)
+	defer ticker.Stop()
+	for range ticker.C {
+		r.mu.Lock()
+		newMap := make(map[string]*client, len(r.clients))
+		maps.Copy(newMap, r.clients)
+		r.clients = newMap
+		r.mu.Unlock()
+	}
 }
 
 func (r *rateLimiter) inactiveClientsCleanup() {

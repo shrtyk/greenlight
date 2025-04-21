@@ -14,11 +14,13 @@ var (
 // Wrapper for all API models
 type Models struct {
 	Movies MovieRepository
+	Users  UserRepository
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
 		Movies: MovieModel{DB: db},
+		Users:  UserModel{DB: db},
 	}
 }
 

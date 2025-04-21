@@ -14,17 +14,17 @@ import (
 )
 
 type MovieRepository interface {
-	MovieGetter
-	MovieMutator
+	MovieReader
+	MovieWriter
 }
 
-type MovieMutator interface {
+type MovieWriter interface {
 	Insert(movie *Movie) error
 	Delete(id int64) error
 	Update(movie *Movie) error
 }
 
-type MovieGetter interface {
+type MovieReader interface {
 	GetByID(id int64) (*Movie, error)
 	GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error)
 }

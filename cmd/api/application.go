@@ -66,6 +66,7 @@ func (app *application) openPostgresDB(cfg config) (*sql.DB, error) {
 type RateLimiter interface {
 	Allow(ip string) bool
 	IsEnabled() bool
+	RunCleanup(ctx context.Context)
 }
 
 type rateLimiter struct {
@@ -92,36 +93,44 @@ func NewRateLimiter(cfg rateLimiterCfg) RateLimiter {
 		clients: make(map[string]*client),
 	}
 	rl.rebuilded_at = time.Now()
-
-	go rl.rebuildClientMap()
-	go rl.inactiveClientsCleanup()
-
 	return rl
 }
 
-func (r *rateLimiter) rebuildClientMap() {
-	ticker := time.NewTicker(6 * time.Hour)
-	defer ticker.Stop()
-	for range ticker.C {
-		r.mu.Lock()
-		newMap := make(map[string]*client, len(r.clients))
-		maps.Copy(newMap, r.clients)
-		r.clients = newMap
-		r.mu.Unlock()
+func (r *rateLimiter) RunCleanup(ctx context.Context) {
+	clientsTicker := time.NewTicker(3 * time.Minute)
+	rebuildTicker := time.NewTicker(6 * time.Hour)
+	defer clientsTicker.Stop()
+	defer rebuildTicker.Stop()
+
+	for {
+		select {
+		case <-clientsTicker.C:
+			r.cleanupInactive()
+		case <-rebuildTicker.C:
+			r.rebuildMap()
+		case <-ctx.Done():
+			return
+		}
 	}
 }
 
-func (r *rateLimiter) inactiveClientsCleanup() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
-	for range ticker.C {
-		r.mu.Lock()
-		for ip, c := range r.clients {
-			if time.Since(c.lastSeen) > 3*time.Minute {
-				delete(r.clients, ip)
-			}
+func (r *rateLimiter) rebuildMap() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	newMap := make(map[string]*client, len(r.clients))
+	maps.Copy(newMap, r.clients)
+	r.clients = newMap
+}
+
+func (r *rateLimiter) cleanupInactive() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for ip, c := range r.clients {
+		if time.Since(c.lastSeen) > 3*time.Minute {
+			delete(r.clients, ip)
 		}
-		r.mu.Unlock()
 	}
 }
 
@@ -143,16 +152,20 @@ func (r *rateLimiter) Allow(ip string) bool {
 	return c.limiter.Allow()
 }
 
+func (r *rateLimiter) IsEnabled() bool {
+	return r.cfg.enable
+}
+
+func (r *rateLimiter) ShutdownCtx(ctx context.Context) {
+
+}
+
 func (r *rateLimiter) getRPS() rate.Limit {
 	return rate.Limit(r.cfg.rps)
 }
 
 func (r *rateLimiter) getBurst() int {
 	return r.cfg.burst
-}
-
-func (r *rateLimiter) IsEnabled() bool {
-	return r.cfg.enable
 }
 
 type MockLimiter struct{}
@@ -168,3 +181,5 @@ func (m *MockLimiter) Allow(ip string) bool {
 func (m *MockLimiter) IsEnabled() bool {
 	return false
 }
+
+func (m *MockLimiter) RunCleanup(ctx context.Context) {}

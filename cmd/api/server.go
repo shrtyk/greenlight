@@ -21,8 +21,10 @@ func (app *application) server() error {
 		ErrorLog:     slog.NewLogLogger(app.logger.Handler(), slog.LevelError),
 	}
 
-	shutDownError := make(chan error)
+	ctx, stopLimiter := context.WithCancel(context.Background())
+	go app.limiter.RunCleanup(ctx)
 
+	shutDownError := make(chan error)
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -32,6 +34,7 @@ func (app *application) server() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
+		stopLimiter()
 		shutDownError <- srv.Shutdown(ctx)
 	}()
 

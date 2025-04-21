@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -159,7 +160,7 @@ func (u UserModel) GetByEmail(email string) (*User, error) {
 func (u UserModel) Update(user *User) error {
 	query := `
 		UPDATE users
-		SET name = $1, email = $2, password_hash = $3, activated = $4, veresion = version + 1
+		SET name = $1, email = $2, password_hash = $3, activated = $4, version = version + 1
 		WHERE id = $5 and version = $6
 		RETURNING version`
 
@@ -187,6 +188,71 @@ func (u UserModel) Update(user *User) error {
 			return err
 		}
 	}
+
+	return nil
+}
+
+type UserInMemRepo struct {
+	mu        sync.RWMutex
+	idCounter int64
+	users     map[int64]*User
+}
+
+func (m *UserInMemRepo) userExists(email string) bool {
+	for _, user := range m.users {
+		if user.Email == email {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *UserInMemRepo) GetByEmail(email string) (*User, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, user := range m.users {
+		if user.Email == email {
+			return user, nil
+		}
+	}
+	return nil, errors.New("user with such email not found")
+}
+
+func (m *UserInMemRepo) Insert(user *User) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.userExists(user.Email) {
+		return ErrDuplicateEmail
+	}
+
+	m.idCounter++
+	user.ID = m.idCounter
+	user.Version = 1
+	user.CreatedAt = time.Now()
+
+	m.users[m.idCounter] = user
+
+	return nil
+}
+
+func (m *UserInMemRepo) Update(user *User) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var u *User
+	for _, us := range m.users {
+		if us.ID == user.ID {
+			u = us
+		}
+	}
+
+	u.Name = user.Name
+	u.Email = user.Email
+	u.Password.hash = user.Password.hash
+	u.Activated = user.Activated
+	u.Version++
 
 	return nil
 }

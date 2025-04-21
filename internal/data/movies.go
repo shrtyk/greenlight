@@ -253,6 +253,7 @@ func (m *MovieInMemRepo) Insert(movie *Movie) error {
 
 	m.movies[m.idCounter] = movie
 	m.idCounter++
+
 	return nil
 }
 

@@ -29,5 +29,10 @@ func NewMockModels() Models {
 		Movies: &MovieInMemRepo{
 			idCounter: 1,
 			movies:    make(map[int64]*Movie),
-		}}
+		},
+		Users: &UserInMemRepo{
+			idCounter: 1,
+			users:     make(map[int64]*User),
+		},
+	}
 }

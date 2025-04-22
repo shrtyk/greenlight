@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shortykevich/greenlight/internal/mailer"
 	"golang.org/x/time/rate"
 )
 
@@ -17,6 +18,7 @@ type application struct {
 	logger  *slog.Logger
 	models  data.Models
 	limiter RateLimiter
+	mailer  mailer.Mailer
 }
 
 func newApplication() *application {
@@ -43,6 +45,11 @@ func (app *application) setRateLimiter(limiter RateLimiter) *application {
 	return app
 }
 
+func (app *application) setMailer(mailer mailer.Mailer) *application {
+	app.mailer = mailer
+	return app
+}
+
 func (app *application) openPostgresDB(cfg config) (*sql.DB, error) {
 	db, err := sql.Open("pgx", cfg.db.dsn)
 	if err != nil {
@@ -65,12 +72,11 @@ func (app *application) openPostgresDB(cfg config) (*sql.DB, error) {
 
 type RateLimiter interface {
 	Allow(ip string) bool
-	IsEnabled() bool
 	RunCleanup(ctx context.Context)
 }
 
 type rateLimiter struct {
-	cfg          rateLimiterCfg
+	cfg          *rateLimiterCfg
 	mu           sync.Mutex
 	clients      map[string]*client
 	rebuilded_at time.Time
@@ -89,10 +95,10 @@ type client struct {
 
 func NewRateLimiter(cfg rateLimiterCfg) RateLimiter {
 	rl := &rateLimiter{
-		cfg:     cfg,
-		clients: make(map[string]*client),
+		cfg:          &cfg,
+		clients:      make(map[string]*client),
+		rebuilded_at: time.Now(),
 	}
-	rl.rebuilded_at = time.Now()
 	return rl
 }
 

@@ -17,7 +17,7 @@ func (app *application) applyMiddlewares(h http.Handler, mws ...func(http.Handle
 
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if app.limiter.IsEnabled() {
+		if app.config.limiter.enable {
 			ip, err := app.clientIP(r)
 			if err != nil {
 				app.serverErrorResponse(w, r, err)

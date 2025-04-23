@@ -11,7 +11,7 @@ var (
 	ErrCloseRows      = errors.New("couldn't close rows")
 )
 
-// Wrapper for all API models
+// Models is a wrapper for all API models.
 type Models struct {
 	Movies MovieRepository
 	Users  UserRepository

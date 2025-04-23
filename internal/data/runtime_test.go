@@ -1,15 +1,17 @@
-package data
+package data_test
 
 import (
 	"strconv"
 	"testing"
+
+	"github.com/shortykevich/greenlight/internal/data"
 )
 
 func TestRuntimeType(t *testing.T) {
 	quotedStr := strconv.Quote("120 mins")
 
 	t.Run("marshalling test", func(t *testing.T) {
-		tVal := Runtime(120)
+		tVal := data.Runtime(120)
 
 		got, err := tVal.MarshalJSON()
 		if err != nil {
@@ -23,14 +25,14 @@ func TestRuntimeType(t *testing.T) {
 	})
 
 	t.Run("unmarshalling test", func(t *testing.T) {
-		var got Runtime
+		var got data.Runtime
 
 		tVal := quotedStr
 		if err := got.UnmarshalJSON([]byte(tVal)); err != nil {
 			t.Fatalf("didn't expect error but got: %v", err)
 		}
 
-		want := Runtime(120)
+		want := data.Runtime(120)
 		if got != want {
 			t.Errorf("got %v, wanted %v", got, want)
 		}

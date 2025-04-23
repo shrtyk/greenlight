@@ -77,16 +77,18 @@ type RateLimiter interface {
 }
 
 type rateLimiter struct {
-	cfg          *rateLimiterCfg
-	mu           sync.Mutex
-	clients      map[string]*client
-	rebuilded_at time.Time
+	cfg         *rateLimiterCfg
+	mu          sync.Mutex
+	clients     map[string]*client
+	rebuildedAt time.Time
 }
 
 type rateLimiterCfg struct {
-	enable bool
-	rps    float64
-	burst  int
+	enable      bool
+	rps         float64
+	burst       int
+	cleanupFreq time.Duration
+	rebuildFreq time.Duration
 }
 
 type client struct {
@@ -96,16 +98,16 @@ type client struct {
 
 func NewRateLimiter(cfg rateLimiterCfg) RateLimiter {
 	rl := &rateLimiter{
-		cfg:          &cfg,
-		clients:      make(map[string]*client),
-		rebuilded_at: time.Now(),
+		cfg:         &cfg,
+		clients:     make(map[string]*client),
+		rebuildedAt: time.Now(),
 	}
 	return rl
 }
 
 func (r *rateLimiter) RunCleanup(ctx context.Context) {
-	clientsTicker := time.NewTicker(3 * time.Minute)
-	rebuildTicker := time.NewTicker(6 * time.Hour)
+	clientsTicker := time.NewTicker(r.cfg.cleanupFreq)
+	rebuildTicker := time.NewTicker(r.cfg.rebuildFreq)
 	defer clientsTicker.Stop()
 	defer rebuildTicker.Stop()
 
@@ -135,7 +137,7 @@ func (r *rateLimiter) cleanupInactive() {
 	defer r.mu.Unlock()
 
 	for ip, c := range r.clients {
-		if time.Since(c.lastSeen) > 3*time.Minute {
+		if time.Since(c.lastSeen) > r.cfg.cleanupFreq {
 			delete(r.clients, ip)
 		}
 	}
@@ -159,14 +161,6 @@ func (r *rateLimiter) Allow(ip string) bool {
 	return c.limiter.Allow()
 }
 
-func (r *rateLimiter) IsEnabled() bool {
-	return r.cfg.enable
-}
-
-func (r *rateLimiter) ShutdownCtx(ctx context.Context) {
-
-}
-
 func (r *rateLimiter) getRPS() rate.Limit {
 	return rate.Limit(r.cfg.rps)
 }
@@ -181,7 +175,7 @@ func NewMockLimiter() RateLimiter {
 	return &MockLimiter{}
 }
 
-func (m *MockLimiter) Allow(ip string) bool {
+func (m *MockLimiter) Allow(_ string) bool {
 	return true
 }
 
@@ -189,4 +183,4 @@ func (m *MockLimiter) IsEnabled() bool {
 	return false
 }
 
-func (m *MockLimiter) RunCleanup(ctx context.Context) {}
+func (m *MockLimiter) RunCleanup(_ context.Context) {}

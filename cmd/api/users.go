@@ -15,7 +15,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		Password string `json:"password"`
 	}
 
-	if err := app.readJson(w, r, &input); err != nil {
+	if err := app.readJSON(w, r, &input); err != nil {
 		app.badRequestResponse(w, r, err)
 		return
 	}
@@ -53,7 +53,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 		}
 	})
 
-	err := app.writeJson(w, envelope{"user": user}, http.StatusCreated, nil)
+	err := app.writeJSON(w, envelope{"user": user}, http.StatusCreated, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

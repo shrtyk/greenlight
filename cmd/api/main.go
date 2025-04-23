@@ -47,6 +47,18 @@ func main() {
 	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
 	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
 	flag.BoolVar(&cfg.limiter.enable, "limiter-enabled", true, "Enable rate limiter")
+	flag.DurationVar(
+		&cfg.limiter.cleanupFreq,
+		"clean-clients-freq",
+		3*time.Minute,
+		"Frequency of cleaning up limiter cache",
+	)
+	flag.DurationVar(
+		&cfg.limiter.rebuildFreq,
+		"rebuild-clients-freq",
+		6*time.Hour,
+		"Frequency of rebuilding limiter cache to prevent map memory leak",
+	)
 
 	flag.StringVar(&cfg.smtp.host, "smtp-host", os.Getenv("SMTP_HOST"), "SMTP host")
 	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
@@ -78,7 +90,7 @@ func main() {
 		os.Exit(1)
 	}
 	defer func() {
-		if err := db.Close(); err != nil {
+		if err = db.Close(); err != nil {
 			logger.Error("couldn't close database", "err", err)
 			os.Exit(1)
 		}
@@ -87,8 +99,7 @@ func main() {
 
 	app.setModels(data.NewModels(db))
 
-	if err := app.server(); err != nil {
+	if err = app.server(); err != nil {
 		app.logger.Error(err.Error())
-		os.Exit(1)
 	}
 }

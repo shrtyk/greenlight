@@ -29,7 +29,7 @@ func (app *application) readIDParam(r *http.Request) (int64, error) {
 	return id, nil
 }
 
-func (app *application) writeJson(w http.ResponseWriter, data envelope, status int, headers http.Header) error {
+func (app *application) writeJSON(w http.ResponseWriter, data envelope, status int, headers http.Header) error {
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (app *application) writeJson(w http.ResponseWriter, data envelope, status i
 	// b = buf.Bytes()
 
 	maps.Copy(w.Header(), headers)
-	w.Header().Set("content-type", "application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
 	if _, err = w.Write(b); err != nil {
@@ -55,7 +55,7 @@ func (app *application) writeJson(w http.ResponseWriter, data envelope, status i
 	return nil
 }
 
-func (app *application) readJson(w http.ResponseWriter, r *http.Request, dst any) error {
+func (app *application) readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 	maxBytes := 1_048_576
 	r.Body = http.MaxBytesReader(w, r.Body, int64(maxBytes))
 

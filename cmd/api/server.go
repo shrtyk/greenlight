@@ -21,8 +21,8 @@ func (app *application) server() error {
 		ErrorLog:     slog.NewLogLogger(app.logger.Handler(), slog.LevelError),
 	}
 
-	ctx, stopLimiter := context.WithCancel(context.Background())
-	go app.limiter.RunCleanup(ctx)
+	cancelCtx, stopLimiter := context.WithCancel(context.Background())
+	go app.limiter.RunCleanup(cancelCtx)
 
 	shutDownError := make(chan error)
 	go func() {
@@ -33,10 +33,10 @@ func (app *application) server() error {
 		s := <-quit
 		app.logger.Info("shutting down server", "signal", s.String())
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		timeoutCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		if err := srv.Shutdown(ctx); err != nil {
+		if err := srv.Shutdown(timeoutCtx); err != nil {
 			shutDownError <- err
 		}
 

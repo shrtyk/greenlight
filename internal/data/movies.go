@@ -161,6 +161,7 @@ func (m MovieModel) Update(movie *Movie) error {
 }
 
 func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
+	// #nosec G201 -- filters validated in handler
 	query := fmt.Sprintf(`
 		SELECT COUNT(*) OVER(), id, created_at, title, year, runtime, genres, version
 		FROM movies
@@ -194,7 +195,7 @@ func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Mov
 	for rows.Next() {
 		var movie Movie
 
-		err := rows.Scan(
+		err = rows.Scan(
 			&totalRecords,
 			&movie.ID,
 			&movie.CreatedAt,
@@ -211,7 +212,7 @@ func (m MovieModel) GetAll(title string, genres Genres, filters Filters) ([]*Mov
 		movies = append(movies, &movie)
 	}
 
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, Metadata{}, err
 	}
 
@@ -226,7 +227,7 @@ func ValidateMovie(v *validator.Validator, movie *Movie) {
 
 	v.Check(movie.Year != 0, "year", "must be provided")
 	v.Check(movie.Year >= 1888, "year", "must be greater than 1888")
-	v.Check(movie.Year <= int32(time.Now().Year()), "year", "must not be in the future")
+	v.Check(int(movie.Year) <= time.Now().Year(), "year", "must not be in the future")
 
 	v.Check(movie.Runtime != 0, "runtime", "must be provided")
 	v.Check(movie.Runtime > 0, "runtime", "must be a positive integer")
@@ -302,7 +303,7 @@ func (m *MovieInMemRepo) Update(movie *Movie) error {
 	return nil
 }
 
-func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
+func (m *MovieInMemRepo) GetAll(_ string, _ Genres, _ Filters) ([]*Movie, Metadata, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

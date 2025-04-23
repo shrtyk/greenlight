@@ -34,17 +34,17 @@ func (m *Mailer) Send(recipient, templateFile string, data any) error {
 	}
 
 	subject := new(bytes.Buffer)
-	if err := tmpl.ExecuteTemplate(subject, "subject", data); err != nil {
+	if err = tmpl.ExecuteTemplate(subject, "subject", data); err != nil {
 		return err
 	}
 
 	plainBody := new(bytes.Buffer)
-	if err := tmpl.ExecuteTemplate(plainBody, "plainBody", data); err != nil {
+	if err = tmpl.ExecuteTemplate(plainBody, "plainBody", data); err != nil {
 		return err
 	}
 
 	htmlBody := new(bytes.Buffer)
-	if err := tmpl.ExecuteTemplate(htmlBody, "htmlBody", data); err != nil {
+	if err = tmpl.ExecuteTemplate(htmlBody, "htmlBody", data); err != nil {
 		return err
 	}
 
@@ -55,7 +55,7 @@ func (m *Mailer) Send(recipient, templateFile string, data any) error {
 	msg.SetBody("text/plain", plainBody.String())
 	msg.AddAlternative("text/plain", htmlBody.String())
 
-	if err := m.dialer.DialAndSend(msg); err != nil {
+	if err = m.dialer.DialAndSend(msg); err != nil {
 		return err
 	}
 

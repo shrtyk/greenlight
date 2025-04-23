@@ -14,6 +14,7 @@ import (
 )
 
 type application struct {
+	wg      sync.WaitGroup
 	config  config
 	logger  *slog.Logger
 	models  data.Models

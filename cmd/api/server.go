@@ -36,7 +36,13 @@ func (app *application) server() error {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		shutDownError <- srv.Shutdown(ctx)
+		if err := srv.Shutdown(ctx); err != nil {
+			shutDownError <- err
+		}
+
+		app.logger.Info("completeing background tasks", "addr", srv.Addr)
+		app.wg.Wait()
+		shutDownError <- nil
 	}()
 
 	app.logger.Info("starting server", "addr", srv.Addr, "env", app.config.env)

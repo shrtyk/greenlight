@@ -1,9 +1,8 @@
 {{ define "subject" }}Welcome to Greenlight!{{ end }}
 
 {{ define "plainBody" }}
-  Hi, Thanks for signing up for a Greenlight account. We're excited to have you
-  on board! For future reference, your user ID number is {{ .ID }}. Thanks, The
-  Greenlight Team
+  Hi {{ .Name }}! Thanks for signing up for a Greenlight account. We're excited
+  to have you on board! Thanks, The Greenlight Team
 {{ end }}
 
 {{ define "htmlBody" }}
@@ -14,12 +13,11 @@
       <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     </head>
     <body>
-      <p>Hi,</p>
+      <p>Hi, {{ .Name }}!</p>
       <p>
         Thanks for signing up for a Greenlight account. We're excited to have
         you on board!
       </p>
-      <p>For future reference, your user ID number is {{ .ID }}.</p>
       <p>Thanks,</p>
       <p>The Greenlight Team</p>
     </body>

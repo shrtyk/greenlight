@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	ScopeActiovation = "activation"
+	ScopeActivation = "activation"
 )
 
 type Token struct {
@@ -83,6 +83,6 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	_, err := m.DB.ExecContext(ctx, query, userID, scope)
+	_, err := m.DB.ExecContext(ctx, query, scope, userID)
 	return err
 }

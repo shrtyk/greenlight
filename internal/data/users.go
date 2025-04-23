@@ -2,6 +2,7 @@ package data
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"errors"
 	"sync"
@@ -88,6 +89,7 @@ type UserRepository interface {
 
 type UserReader interface {
 	GetByEmail(email string) (*User, error)
+	GetForToken(scope, TokenPlaintext string) (*User, error)
 }
 
 type UserWriter interface {
@@ -192,6 +194,44 @@ func (u UserModel) Update(user *User) error {
 	return nil
 }
 
+func (u UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
+	query := `
+		SELECT users.id, users.created_at, users.name, users.email, users.password_hash, users.activated, users.version
+		FROM users
+		INNER JOIN tokens
+		ON users.id = tokens.user_id
+		WHERE tokens.hash = $1
+		AND tokens.scope = $2
+		AND tokens.expiry > $3`
+
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+	args := []any{tokenHash[:], tokenScope, time.Now()}
+
+	var user User
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	err := u.DB.QueryRowContext(ctx, query, args...).Scan(
+		&user.ID,
+		&user.CreatedAt,
+		&user.Name,
+		&user.Email,
+		&user.Password.hash,
+		&user.Activated,
+		&user.Version,
+	)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return nil, ErrRecordNotFound
+		default:
+			return nil, err
+		}
+	}
+
+	return &user, nil
+}
+
 type UserInMemRepo struct {
 	mu        sync.RWMutex
 	idCounter int64
@@ -255,4 +295,9 @@ func (m *UserInMemRepo) Update(user *User) error {
 	u.Version++
 
 	return nil
+}
+
+func (m *UserInMemRepo) GetForToken(scope, TokenPlaintext string) (*User, error) {
+	// TODO: implement logic for testing
+	return nil, nil
 }

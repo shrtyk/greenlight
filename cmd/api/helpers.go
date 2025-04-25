@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,12 +38,12 @@ func (app *application) writeJSON(w http.ResponseWriter, data envelope, status i
 
 	// Uncomment to add extra readability during manual testing:
 
-	// b = append(b, '\n')
-	// buf := bytes.Buffer{}
-	// if err := json.Indent(&buf, b, "", "\t"); err != nil {
-	// 	return err
-	// }
-	// b = buf.Bytes()
+	b = append(b, '\n')
+	buf := bytes.Buffer{}
+	if err := json.Indent(&buf, b, "", "\t"); err != nil {
+		return err
+	}
+	b = buf.Bytes()
 
 	maps.Copy(w.Header(), headers)
 	w.Header().Set("Content-Type", "application/json")

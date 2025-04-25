@@ -13,16 +13,18 @@ var (
 
 // Models is a wrapper for all API models.
 type Models struct {
-	Movies MovieRepository
-	Users  UserRepository
-	Tokens TokenModel
+	Movies      MovieRepository
+	Users       UserRepository
+	Tokens      TokenModel
+	Permissions PermissionModel
 }
 
 func NewModels(db *sql.DB) Models {
 	return Models{
-		Movies: MovieModel{DB: db},
-		Users:  UserModel{DB: db},
-		Tokens: TokenModel{DB: db},
+		Movies:      MovieModel{DB: db},
+		Users:       UserModel{DB: db},
+		Tokens:      TokenModel{DB: db},
+		Permissions: PermissionModel{DB: db},
 	}
 }
 

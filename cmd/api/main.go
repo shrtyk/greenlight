@@ -1,9 +1,11 @@
 package main
 
 import (
+	"expvar"
 	"flag"
 	"log/slog"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -104,9 +106,21 @@ func main() {
 			os.Exit(1)
 		}
 	}()
+
 	logger.Info("database connection pool established")
 
 	app.setModels(data.NewModels(db))
+
+	expvar.NewString("version").Set(version)
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+	expvar.Publish("database", expvar.Func(func() any {
+		return db.Stats()
+	}))
+	expvar.Publish("timestamp", expvar.Func(func() any {
+		return time.Now().Unix()
+	}))
 
 	if err = app.server(); err != nil {
 		app.logger.Error(err.Error())

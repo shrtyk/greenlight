@@ -4,36 +4,12 @@ import (
 	"flag"
 	"log/slog"
 	"os"
-	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/mailer"
 )
-
-const version = "1.0.0"
-
-type config struct {
-	port int
-	env  string
-	db   struct {
-		dsn          string
-		maxOpenConns int
-		maxIdleConns int
-		maxIdleTime  time.Duration
-	}
-	limiter rateLimiterCfg
-	smtp    struct {
-		host     string
-		port     int
-		username string
-		password string
-		sender   string
-	}
-	cors struct {
-		trustedOrigins []string
-	}
-}
 
 func main() {
 	var cfg config

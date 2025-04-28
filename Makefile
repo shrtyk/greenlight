@@ -1,4 +1,5 @@
 include .env
+
 #=======================================================================================#
 # HELPERS
 #=======================================================================================#
@@ -20,7 +21,7 @@ confirm:
 ## run/api: run the cmd/api application
 .PHONY: run/api
 run/api:
-	go run ./cmd/api
+	@go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN}
 
 ## db/psql: connect to the PostgreSQL using env variable 'GREENLIGHT_DB_DSN'
 .PHONY: db/psql
@@ -50,6 +51,9 @@ tidy:
 	go fmt ./...
 	@echo 'Tidying module dependencies...'
 	go mod tidy
+	@echo 'Verifying and vendoring module dependencies...'
+	go mod verify
+	go mod vendor
 
 ## audit: run quality control checks
 .PHONY: audit

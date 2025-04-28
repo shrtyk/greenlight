@@ -3,10 +3,16 @@ package main
 import (
 	"context"
 	"database/sql"
+	"expvar"
+	"flag"
 	"log/slog"
+	"os"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 
+	_ "github.com/joho/godotenv/autoload"
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/mailer"
 )
@@ -80,4 +86,54 @@ func openPostgresDB(cfg config) (*sql.DB, error) {
 	}
 
 	return db, nil
+}
+
+func initFlags(cfg *config) {
+	flag.IntVar(&cfg.port, "port", 4000, "Api server port")
+	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
+
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
+	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
+
+	flag.Float64Var(&cfg.limiter.rps, "limiter-rps", 2, "Rate limiter maximum requests per second")
+	flag.IntVar(&cfg.limiter.burst, "limiter-burst", 4, "Rate limiter maximum burst")
+	flag.BoolVar(&cfg.limiter.enable, "limiter-enabled", true, "Enable rate limiter")
+	flag.DurationVar(
+		&cfg.limiter.cleanupFreq,
+		"clean-clients-freq",
+		3*time.Minute,
+		"Frequency of cleaning up limiter cache",
+	)
+	flag.DurationVar(
+		&cfg.limiter.rebuildFreq,
+		"rebuild-clients-freq",
+		6*time.Hour,
+		"Frequency of rebuilding limiter cache to prevent map memory leak",
+	)
+
+	flag.StringVar(&cfg.smtp.host, "smtp-host", os.Getenv("SMTP_HOST"), "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 25, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", os.Getenv("SMTP_USERNAME"), "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", os.Getenv("SMTP_PASSWORD"), "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", os.Getenv("SMTP_SENDER"), "SMTP sender")
+
+	flag.Func("cors-trusted-origins", "Trusted CORS origins (space separated)", func(origin string) error {
+		cfg.cors.trustedOrigins = strings.Fields(origin)
+		return nil
+	})
+}
+
+func initBasicMetrics(database *sql.DB) {
+	expvar.NewString("version").Set(version)
+	expvar.Publish("goroutines", expvar.Func(func() any {
+		return runtime.NumGoroutine()
+	}))
+	expvar.Publish("database", expvar.Func(func() any {
+		return database.Stats()
+	}))
+	expvar.Publish("timestamp", expvar.Func(func() any {
+		return time.Now().Unix()
+	}))
 }

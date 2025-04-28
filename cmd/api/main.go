@@ -89,13 +89,7 @@ func main() {
 		cfg.smtp.sender,
 	)
 
-	app := newApplication().
-		setConfig(cfg).
-		setLogger(logger).
-		setRateLimiter(rateLimiter).
-		setMailer(mailer)
-
-	db, err := app.openPostgresDB(cfg)
+	db, err := openPostgresDB(cfg)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -109,7 +103,13 @@ func main() {
 
 	logger.Info("database connection pool established")
 
-	app.setModels(data.NewModels(db))
+	app := newApplication(
+		withConfig(cfg),
+		withLogger(logger),
+		withRateLimiter(rateLimiter),
+		withMailer(mailer),
+		withModels(data.NewModels(db)),
+	)
 
 	expvar.NewString("version").Set(version)
 	expvar.Publish("goroutines", expvar.Func(func() any {

@@ -13,11 +13,12 @@ import (
 func TestMovies(t *testing.T) {
 	cfg := config{env: "development"}
 
-	app := newApplication().
-		setConfig(cfg).
-		setLogger(nil).
-		setModels(data.NewMockModels()).
-		setRateLimiter(NewMockLimiter())
+	app := newApplication(
+		withConfig(cfg),
+		withLogger(nil),
+		withModels(data.NewMockModels()),
+		withRateLimiter(NewMockLimiter()),
+	)
 
 	router := app.routes()
 	ts := httptest.NewServer(router)

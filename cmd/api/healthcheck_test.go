@@ -10,9 +10,10 @@ import (
 
 func TestHealthCheck(t *testing.T) {
 	cfg := config{env: "development"}
-	app := newApplication().
-		setConfig(cfg).
-		setLogger(nil)
+	app := newApplication(
+		withConfig(cfg),
+		withLogger(nil),
+	)
 
 	req, err := http.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
 	assertNoError(t, err)

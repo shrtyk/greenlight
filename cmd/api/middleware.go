@@ -12,6 +12,7 @@ import (
 
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/tomasen/realip"
 )
 
 // Wraps handler 'h' with 'mws' middlewares.
@@ -27,12 +28,7 @@ func (app *application) applyMiddlewares(h http.Handler, mws ...func(http.Handle
 func (app *application) rateLimit(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if app.config.limiter.enable {
-			ip, err := app.clientIP(r)
-			if err != nil {
-				app.serverErrorResponse(w, r, err)
-				return
-			}
-
+			ip := realip.FromRequest(r)
 			if !app.limiter.Allow(ip) {
 				app.rateLimitExceededResponse(w, r)
 				return

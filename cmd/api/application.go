@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"expvar"
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 	"runtime"
@@ -29,14 +30,9 @@ type application struct {
 }
 
 type config struct {
-	port int
-	env  string
-	db   struct {
-		dsn          string
-		maxOpenConns int
-		maxIdleConns int
-		maxIdleTime  time.Duration
-	}
+	port    int
+	env     string
+	db      dbConfig
 	limiter rateLimiterCfg
 	smtp    struct {
 		host     string
@@ -93,7 +89,11 @@ func withMailer(mailer mailer.Mailer) Option {
 }
 
 func openPostgresDB(cfg config) (*sql.DB, error) {
-	db, err := sql.Open("pgx", cfg.db.dsn)
+	if cfg.env == "development" {
+		cfg.db.host = "localhost"
+	}
+
+	db, err := sql.Open("pgx", cfg.db.postgresDSN())
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,19 @@ func initFlags(cfg *config) {
 	flag.IntVar(&cfg.port, "port", 4000, "Api server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
 
-	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+	// os.Getenv("GREENLIGHT_DB_USERNAME")
+	// os.Getenv("GREENLIGHT_DB_PASSWORD")
+	// os.Getenv("GREENLIGHT_DB_HOST")
+	// os.Getenv("GREENLIGHT_DB_PORT")
+	// os.Getenv("GREENLIGHT_DB_NAME")
+
+	// flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
+	flag.StringVar(&cfg.db.user, "db-user", os.Getenv("GREENLIGHT_DB_USERNAME"), "PostgreSQL username")
+	flag.StringVar(&cfg.db.password, "db-pwd", os.Getenv("GREENLIGHT_DB_PASSWORD"), "PostgreSQL password")
+	flag.StringVar(&cfg.db.host, "db-host", os.Getenv("GREENLIGHT_DB_HOST"), "PostgreSQL host")
+	flag.StringVar(&cfg.db.port, "db-port", os.Getenv("GREENLIGHT_DB_PORT"), "PostgreSQL port")
+	flag.StringVar(&cfg.db.dbName, "db-name", os.Getenv("GREENLIGHT_DB_NAME"), "PostgreSQL database name")
+
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conns", 25, "PostgreSQL max open connections")
 	flag.IntVar(&cfg.db.maxOpenConns, "db-max-idle-conns", 25, "PostgreSQL max idle connections")
 	flag.DurationVar(&cfg.db.maxIdleTime, "db-max-idle-time", 15*time.Minute, "PostgreSQL max connection idle time")
@@ -160,4 +172,26 @@ func initBasicMetrics(database *sql.DB) {
 	expvar.Publish("timestamp", expvar.Func(func() any {
 		return time.Now().Unix()
 	}))
+}
+
+type dbConfig struct {
+	user         string
+	password     string
+	host         string
+	port         string
+	dbName       string
+	maxOpenConns int
+	maxIdleConns int
+	maxIdleTime  time.Duration
+}
+
+func (c dbConfig) postgresDSN() string {
+	return fmt.Sprintf(
+		"postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.user,
+		c.password,
+		c.host,
+		c.port,
+		c.dbName,
+	)
 }

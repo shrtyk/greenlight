@@ -21,7 +21,7 @@ confirm:
 ## run/api: run the cmd/api application
 .PHONY: run/api
 run/api:
-	@go run ./cmd/api -db-dsn=${GREENLIGHT_DB_DSN}
+	@go run ./cmd/api -db-user=${GREENLIGHT_DB_USERNAME} -db-pwd=${GREENLIGHT_DB_PASSWORD} -db-host=${GREENLIGHT_DB_HOST}  -db-port=${GREENLIGHT_DB_PORT} -db-name=${GREENLIGHT_DB_NAME}
 
 ## db/psql: connect to the PostgreSQL using env variable 'GREENLIGHT_DB_DSN'
 .PHONY: db/psql

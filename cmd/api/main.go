@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -13,8 +14,15 @@ import (
 
 func main() {
 	var cfg config
+
 	initFlags(&cfg)
+	displayVersion := flag.Bool("version", false, "Display version and exit")
+
 	flag.Parse()
+	if *displayVersion {
+		fmt.Printf("Version:\t%s\n", version)
+		os.Exit(0)
+	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 	rateLimiter := NewRateLimiter(cfg.limiter)

@@ -66,3 +66,19 @@ audit:
 	staticcheck ./...
 	@echo 'Running tests...'
 	go test -race -vet=off ./...
+
+#=======================================================================================#
+# BUILD
+#=======================================================================================#
+
+## build/api: build the cmd/api linux/amd64 application
+.PHONY: build/api/linux
+build/api/linux:
+	@echo 'Building cmd/api...'
+	GOOS=linux GOARCH=amd64 go build -ldflags='-s' -o=./bin/linux_amd64/api ./cmd/api
+
+## build/api: build the cmd/api darwin/arm64 application
+.PHONY: build/api/mac
+build/api/mac:
+	@echo 'Building cmd/api...'
+	GOOS=darwin GOARCH=arm64 go build -ldflags='-s' -o=./bin/darwin_arm64/api ./cmd/api

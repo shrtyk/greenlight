@@ -14,9 +14,10 @@ import (
 
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/mailer"
+	"github.com/shortykevich/greenlight/internal/vcs"
 )
 
-const version = "1.0.0"
+var version = vcs.Version()
 
 type application struct {
 	wg      sync.WaitGroup

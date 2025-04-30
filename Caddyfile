@@ -1,0 +1,4 @@
+{$DOMAIN} {
+    reverse_proxy app:4545
+    tls {$EMAIL}
+}

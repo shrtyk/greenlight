@@ -2,7 +2,6 @@ services:
   db:
     image: postgres:17
     restart: always
-    env_file: .env
     environment:
       POSTGRES_USER: ${GREENLIGHT_DB_NAME}
       POSTGRES_PASSWORD: ${GREENLIGHT_DB_PASSWORD}
@@ -37,16 +36,37 @@ services:
       db:
         condition: service_healthy
     command: [--port=4545, --env=production]
-    env_file: .env
-    # environment:
-    #   GREENLIGHT_DB_PORT: ${GREENLIGHT_DB_PORT}
-    #   GREENLIGHT_DB_USERNAME: ${GREENLIGHT_DB_USERNAME}
-    #   GREENLIGHT_DB_PASSWORD: ${GREENLIGHT_DB_PASSWORD}
-    #   GREENLIGHT_DB_HOST: ${GREENLIGHT_DB_HOST}
-    #   GREENLIGHT_DB_NAME: ${GREENLIGHT_DB_NAME}
+    environment:
+      GREENLIGHT_DB_PORT: ${GREENLIGHT_DB_PORT}
+      GREENLIGHT_DB_USERNAME: ${GREENLIGHT_DB_USERNAME}
+      GREENLIGHT_DB_PASSWORD: ${GREENLIGHT_DB_PASSWORD}
+      GREENLIGHT_DB_HOST: ${GREENLIGHT_DB_HOST}
+      GREENLIGHT_DB_NAME: ${GREENLIGHT_DB_NAME}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_SENDER: ${SMTP_SENDER}
     ports:
       - "4545:4545"
     restart: on-failure
 
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN_NAME}
+      EMAIL: ${EMAIL}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
 volumes:
+  caddy_data:
+  caddy_config:
   db_data:

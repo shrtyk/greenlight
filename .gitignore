@@ -23,7 +23,6 @@ go.work.sum
 
 # env files
 .env
-.env_prod
 
 cmd/examples/
 bin/

@@ -116,13 +116,6 @@ func initFlags(cfg *config) {
 	flag.IntVar(&cfg.port, "port", 4000, "Api server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
 
-	// os.Getenv("GREENLIGHT_DB_USERNAME")
-	// os.Getenv("GREENLIGHT_DB_PASSWORD")
-	// os.Getenv("GREENLIGHT_DB_HOST")
-	// os.Getenv("GREENLIGHT_DB_PORT")
-	// os.Getenv("GREENLIGHT_DB_NAME")
-
-	// flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "PostgreSQL DSN")
 	flag.StringVar(&cfg.db.user, "db-user", os.Getenv("GREENLIGHT_DB_USERNAME"), "PostgreSQL username")
 	flag.StringVar(&cfg.db.password, "db-pwd", os.Getenv("GREENLIGHT_DB_PASSWORD"), "PostgreSQL password")
 	flag.StringVar(&cfg.db.host, "db-host", os.Getenv("GREENLIGHT_DB_HOST"), "PostgreSQL host")

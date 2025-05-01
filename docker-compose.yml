@@ -31,11 +31,13 @@ services:
         condition: service_healthy
 
   app:
-    build: .
+    image: ghcr.io/shortykevich/greenlight:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     depends_on:
       db:
         condition: service_healthy
-    command: [--port=4545, --env=production]
     environment:
       GREENLIGHT_DB_PORT: ${GREENLIGHT_DB_PORT}
       GREENLIGHT_DB_USERNAME: ${GREENLIGHT_DB_USERNAME}
@@ -57,8 +59,8 @@ services:
       DOMAIN: ${DOMAIN_NAME}
       EMAIL: ${EMAIL}
     ports:
-      - "80:80"
-      - "443:443"
+      - "6969:80"
+      - "6967:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

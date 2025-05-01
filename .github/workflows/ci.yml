@@ -64,6 +64,6 @@ jobs:
               ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} << 'EOF'
             cd /home/shortyk/test-dep/greenlight
             docker-compose pull app
-            docker-compose up -d --no-deps app
+            docker-compose up -d --no-build
             docker image prune -af
           EOF

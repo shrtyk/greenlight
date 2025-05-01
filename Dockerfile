@@ -15,4 +15,3 @@ COPY Caddyfile .
 EXPOSE 4545
 
 ENTRYPOINT ["./api"]
-CMD ["--port=4545", "--env=production"]

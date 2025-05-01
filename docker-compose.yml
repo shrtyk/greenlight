@@ -3,7 +3,7 @@ services:
     image: postgres:17
     restart: always
     environment:
-      POSTGRES_USER: ${GREENLIGHT_DB_NAME}
+      POSTGRES_USER: ${GREENLIGHT_DB_USERNAME}
       POSTGRES_PASSWORD: ${GREENLIGHT_DB_PASSWORD}
       POSTGRES_DB: ${GREENLIGHT_DB_NAME}
     volumes:
@@ -47,6 +47,7 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_SENDER: ${SMTP_SENDER}
+    command: ["--env=production", "--port=4545"]
     ports:
       - "4545:4545"
     restart: on-failure

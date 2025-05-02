@@ -15,13 +15,11 @@ import (
 
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/mailer"
-	"github.com/shortykevich/greenlight/internal/vcs"
 )
-
-var version = vcs.Version()
 
 type application struct {
 	wg      sync.WaitGroup
+	version string
 	config  config
 	logger  *slog.Logger
 	models  data.Models
@@ -61,6 +59,12 @@ func newApplication(opts ...Option) *application {
 func withConfig(cfg config) Option {
 	return func(app *application) {
 		app.config = cfg
+	}
+}
+
+func withVersion(version string) Option {
+	return func(app *application) {
+		app.version = version
 	}
 }
 
@@ -154,8 +158,8 @@ func initFlags(cfg *config) {
 	})
 }
 
-func initBasicMetrics(database *sql.DB) {
-	expvar.NewString("version").Set(version)
+func (app *application) initBasicMetrics(database *sql.DB) {
+	expvar.NewString("version").Set(app.version)
 	expvar.Publish("goroutines", expvar.Func(func() any {
 		return runtime.NumGoroutine()
 	}))

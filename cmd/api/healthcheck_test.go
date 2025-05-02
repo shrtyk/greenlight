@@ -26,7 +26,7 @@ func TestHealthCheck(t *testing.T) {
 		"status": "available",
 		"system_info": map[string]string{
 			"enviroment": app.config.env,
-			"version":    version,
+			"version":    app.version,
 		},
 	}
 

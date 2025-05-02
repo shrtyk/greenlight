@@ -10,15 +10,16 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/mailer"
+	"github.com/shortykevich/greenlight/internal/vcs"
 )
 
 func main() {
 	var cfg config
-
 	initFlags(&cfg)
 	displayVersion := flag.Bool("version", false, "Display version and exit")
-
 	flag.Parse()
+
+	version := vcs.Version(cfg.env)
 	if *displayVersion {
 		fmt.Printf("Version:\t%s\n", version)
 		os.Exit(0)
@@ -49,13 +50,14 @@ func main() {
 
 	app := newApplication(
 		withConfig(cfg),
+		withVersion(version),
 		withLogger(logger),
 		withRateLimiter(rateLimiter),
 		withMailer(mailer),
 		withModels(data.NewModels(db)),
 	)
 
-	initBasicMetrics(db)
+	app.initBasicMetrics(db)
 
 	if err = app.server(); err != nil {
 		app.logger.Error(err.Error())

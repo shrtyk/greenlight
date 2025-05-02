@@ -5,7 +5,7 @@ import (
 	"runtime/debug"
 )
 
-const apiVer = "1.0.0"
+var apiVer = "0.0.0-dev"
 
 func Version(env string) string {
 	var (

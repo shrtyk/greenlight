@@ -15,7 +15,7 @@ var (
 type Models struct {
 	Movies      MovieRepository
 	Users       UserRepository
-	Tokens      TokenModel
+	Tokens      TokenRepository
 	Permissions PermissionModel
 }
 
@@ -30,13 +30,8 @@ func NewModels(db *sql.DB) Models {
 
 func NewMockModels() Models {
 	return Models{
-		Movies: &MovieInMemRepo{
-			idCounter: 1,
-			movies:    make(map[int64]*Movie),
-		},
-		Users: &UserInMemRepo{
-			idCounter: 1,
-			users:     make(map[int64]*User),
-		},
+		Movies: NewMovieInMemRepo(),
+		Users:  NewUserInMemRepo(),
+		Tokens: NewTokensInMemRepo(),
 	}
 }

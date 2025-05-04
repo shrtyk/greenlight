@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 )
 
 func TestMovies(t *testing.T) {
@@ -120,26 +121,19 @@ func TestMovies(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			req, err := http.NewRequest(c.method, ts.URL+c.path, strings.NewReader(c.body))
-			assertNoError(t, err)
+			assertions.AssertNoError(t, err)
 
 			resp, err := http.DefaultClient.Do(req)
-			assertNoError(t, err)
+			assertions.AssertNoError(t, err)
 			t.Cleanup(func() {
 				_ = resp.Body.Close()
 			})
 
 			got, err := io.ReadAll(resp.Body)
 
-			assertNoError(t, err)
-			assertStatusCode(t, resp.StatusCode, c.code)
-			assertStrs(t, string(got), c.want)
+			assertions.AssertNoError(t, err)
+			assertions.AssertStatusCode(t, resp.StatusCode, c.code)
+			assertions.AssertStrings(t, string(got), c.want)
 		})
-	}
-}
-
-func assertStatusCode(t testing.TB, got, want int) {
-	t.Helper()
-	if got != want {
-		t.Errorf("got status %v, want status %v", got, want)
 	}
 }

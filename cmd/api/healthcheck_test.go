@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 )
 
 func TestHealthCheck(t *testing.T) {
@@ -16,7 +18,7 @@ func TestHealthCheck(t *testing.T) {
 	)
 
 	req, err := http.NewRequest(http.MethodGet, "/v1/healthcheck", nil)
-	assertNoError(t, err)
+	assertions.AssertNoError(t, err)
 
 	resp := httptest.NewRecorder()
 
@@ -31,22 +33,9 @@ func TestHealthCheck(t *testing.T) {
 	}
 
 	wantBody, err := json.Marshal(report)
-	assertNoError(t, err)
+	assertions.AssertNoError(t, err)
 
 	gotBody, err := io.ReadAll(resp.Body)
-	assertNoError(t, err)
-	assertStrs(t, string(gotBody), string(wantBody))
-}
-
-func assertNoError(t testing.TB, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("didn't expect error but got one: %v", err)
-	}
-}
-
-func assertStrs(t testing.TB, got, want string) {
-	if got != want {
-		t.Errorf("\ngot:\n%v\nwant:\n%v", got, want)
-	}
+	assertions.AssertNoError(t, err)
+	assertions.AssertStrings(t, string(gotBody), string(wantBody))
 }

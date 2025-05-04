@@ -245,6 +245,13 @@ type MovieInMemRepo struct {
 	movies    map[int64]*Movie
 }
 
+func NewMovieInMemRepo() *MovieInMemRepo {
+	return &MovieInMemRepo{
+		idCounter: 1,
+		movies:    make(map[int64]*Movie),
+	}
+}
+
 func (m *MovieInMemRepo) Insert(movie *Movie) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

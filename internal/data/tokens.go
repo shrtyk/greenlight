@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
+	"sync"
 	"time"
 
 	"github.com/shortykevich/greenlight/internal/validator"
@@ -15,6 +16,12 @@ const (
 	ScopeActivation     = "activation"
 	ScopeAuthentication = "authentication"
 )
+
+type TokenRepository interface {
+	New(userID int64, ttl time.Duration, scope string) (*Token, error)
+	Insert(token *Token) error
+	DeleteAllForUser(scope string, userID int64) error
+}
 
 type Token struct {
 	Plaintext string    `json:"token"`
@@ -86,4 +93,54 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 
 	_, err := m.DB.ExecContext(ctx, query, scope, userID)
 	return err
+}
+
+type TokenInMemRepo struct {
+	mu     sync.Mutex
+	tokens map[string]*Token
+}
+
+func NewTokensInMemRepo() *TokenInMemRepo {
+	return &TokenInMemRepo{
+		tokens: make(map[string]*Token),
+	}
+}
+
+func (m *TokenInMemRepo) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+	token, err := generateToken(userID, ttl, scope)
+	if err != nil {
+		return nil, err
+	}
+
+	err = m.Insert(token)
+	return token, err
+}
+
+func (m *TokenInMemRepo) Insert(token *Token) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.tokens[string(token.Hash)] = token
+	return nil
+}
+
+func (m *TokenInMemRepo) DeleteAllForUser(scope string, userID int64) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for k, v := range m.tokens {
+		if v.Scope == scope && v.UserID == userID {
+			delete(m.tokens, k)
+		}
+	}
+
+	return nil
+}
+
+func (m *TokenInMemRepo) GetToken(hash []byte) (*Token, error) {
+	token, exist := m.tokens[string(hash)]
+	if !exist {
+		return nil, ErrRecordNotFound
+	}
+	return token, nil
 }

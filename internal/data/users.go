@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"slices"
 	"sync"
 	"time"
 
@@ -244,6 +245,7 @@ type UserInMemRepo struct {
 	mu        sync.RWMutex
 	idCounter int64
 	users     map[int64]*User
+	tokens    *TokenInMemRepo
 }
 
 func NewUserInMemRepo() *UserInMemRepo {
@@ -313,6 +315,16 @@ func (m *UserInMemRepo) Update(user *User) error {
 }
 
 func (m *UserInMemRepo) GetForToken(scope, TokenPlaintext string) (*User, error) {
-	// TODO: implement logic for testing
-	return nil, nil
+	tokenHash := sha256.Sum256([]byte(TokenPlaintext))
+	tokens := *m.tokens.GetTokens()
+
+	for _, v := range tokens {
+		hashMatches := slices.Equal(v.Hash, tokenHash[:])
+		notExpired := time.Now().Before(v.Expiry)
+		if hashMatches && notExpired && v.Scope == scope {
+			userID := v.UserID
+			return m.users[userID], nil
+		}
+	}
+	return nil, ErrRecordNotFound
 }

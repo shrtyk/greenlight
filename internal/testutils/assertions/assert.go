@@ -1,6 +1,7 @@
 package assertions
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
@@ -46,5 +47,12 @@ func AssertTokens(t testing.TB, got, want *data.Token) {
 	t.Helper()
 	if !slices.Equal(got.Hash, want.Hash) {
 		t.Errorf("got: %s, want: %s", got.Hash, want.Hash)
+	}
+}
+
+func AssertUsers(t testing.TB, got, want *data.User) {
+	t.Helper()
+	if !reflect.DeepEqual(*got, *want) {
+		t.Errorf("got: %v, want: %v", *got, *want)
 	}
 }

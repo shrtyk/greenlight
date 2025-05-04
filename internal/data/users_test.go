@@ -2,13 +2,14 @@ package data_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/shortykevich/greenlight/internal/data"
 	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 )
 
 func TestUsers(t *testing.T) {
-	users := data.NewUserInMemRepo()
+	users, tokens := data.CreateRelatedUsersAndTokens()
 
 	u1 := newUser("alice", "alice@example.com", "pa55word")
 	err := users.Insert(u1)
@@ -24,17 +25,25 @@ func TestUsers(t *testing.T) {
 	_, err = users.GetByEmail("bob@example.com")
 	assertions.AssertNotFoundError(t, err)
 
-	got, err := users.GetByEmail("alice@example.com")
+	alice, err := users.GetByEmail("alice@example.com")
 	assertions.AssertNoError(t, err)
-	if got != u1 {
-		t.Errorf("expected: %+v but got: %+v", u1, got)
-	}
+	assertions.AssertUsers(t, alice, u1)
 
-	got.Email = "alicenew@example.com"
-	err = users.Update(got)
+	tkn, err := tokens.New(alice.ID, 1*time.Minute, data.ScopeActivation)
+	assertions.AssertNoError(t, err)
+
+	usr, err := users.GetForToken(data.ScopeActivation, tkn.Plaintext)
+	assertions.AssertNoError(t, err)
+	assertions.AssertUsers(t, usr, alice)
+
+	alice.Email = "alicenew@example.com"
+	err = users.Update(alice)
 	assertions.AssertNoError(t, err)
 	_, err = users.GetByEmail("alicenew@example.com")
 	assertions.AssertNoError(t, err)
+
+	_, err = users.GetForToken(data.ScopeActivation, "abcde")
+	assertions.AssertNotFoundError(t, err)
 }
 
 func newUser(name, email, plainPassword string) *data.User {

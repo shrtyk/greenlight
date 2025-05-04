@@ -98,6 +98,7 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 type TokenInMemRepo struct {
 	mu     sync.Mutex
 	tokens map[string]*Token
+	users  *UserInMemRepo
 }
 
 func NewTokensInMemRepo() *TokenInMemRepo {
@@ -143,4 +144,8 @@ func (m *TokenInMemRepo) GetToken(hash []byte) (*Token, error) {
 		return nil, ErrRecordNotFound
 	}
 	return token, nil
+}
+
+func (m *TokenInMemRepo) GetTokens() *map[string]*Token {
+	return &m.tokens
 }

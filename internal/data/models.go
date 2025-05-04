@@ -29,9 +29,17 @@ func NewModels(db *sql.DB) Models {
 }
 
 func NewMockModels() Models {
+	users, tokens := CreateRelatedUsersAndTokens()
 	return Models{
 		Movies: NewMovieInMemRepo(),
-		Users:  NewUserInMemRepo(),
-		Tokens: NewTokensInMemRepo(),
+		Users:  users,
+		Tokens: tokens,
 	}
+}
+
+func CreateRelatedUsersAndTokens() (users *UserInMemRepo, tokens *TokenInMemRepo) {
+	tokens, users = NewTokensInMemRepo(), NewUserInMemRepo()
+	tokens.users = users
+	users.tokens = tokens
+	return
 }

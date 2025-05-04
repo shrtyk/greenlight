@@ -26,7 +26,7 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	Name      string    `json:"name"`
 	Email     string    `json:"email"`
-	Password  password  `json:"-"`
+	Password  Password  `json:"-"`
 	Activated bool      `json:"activated"`
 	Version   int       `json:"-"`
 }
@@ -35,12 +35,12 @@ func (u *User) IsAnonymous() bool {
 	return u == AnonymousUser
 }
 
-type password struct {
+type Password struct {
 	plaintext *string
 	hash      []byte
 }
 
-func (p *password) Set(plaintTextPassword string) error {
+func (p *Password) Set(plaintTextPassword string) error {
 	hash, err := bcrypt.GenerateFromPassword([]byte(plaintTextPassword), 12)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (p *password) Set(plaintTextPassword string) error {
 	return nil
 }
 
-func (p *password) Matches(plainTextPassword string) (bool, error) {
+func (p *Password) Matches(plainTextPassword string) (bool, error) {
 	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plainTextPassword))
 	if err != nil {
 		switch {
@@ -246,7 +246,14 @@ type UserInMemRepo struct {
 	users     map[int64]*User
 }
 
-func (m *UserInMemRepo) userExists(email string) bool {
+func NewUserInMemRepo() *UserInMemRepo {
+	return &UserInMemRepo{
+		idCounter: 1,
+		users:     make(map[int64]*User),
+	}
+}
+
+func (m *UserInMemRepo) UserExists(email string) bool {
 	for _, user := range m.users {
 		if user.Email == email {
 			return true
@@ -264,23 +271,23 @@ func (m *UserInMemRepo) GetByEmail(email string) (*User, error) {
 			return user, nil
 		}
 	}
-	return nil, errors.New("user with such email not found")
+	return nil, ErrRecordNotFound
 }
 
 func (m *UserInMemRepo) Insert(user *User) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if m.userExists(user.Email) {
+	if m.UserExists(user.Email) {
 		return ErrDuplicateEmail
 	}
 
-	m.idCounter++
 	user.ID = m.idCounter
 	user.Version = 1
 	user.CreatedAt = time.Now()
 
 	m.users[m.idCounter] = user
+	m.idCounter++
 
 	return nil
 }

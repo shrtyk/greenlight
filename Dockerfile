@@ -11,8 +11,8 @@ COPY . .
 
 RUN GOOS=linux GOARCH=amd64 \
     go build \
-    -ldflags="-s -w -X 'github.com/shortykevich/greenlight/internal/vcs.apiVer=${API_VERSION}'"  \
-    -o=./bin/linux_amd64/api \
+    -ldflags="-s -w -X github.com/shortykevich/greenlight/internal/vcs.apiVer=${API_VERSION}"  \
+    -o ./bin/linux_amd64/api \
     ./cmd/api
 
 FROM alpine:latest

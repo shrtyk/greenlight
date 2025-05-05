@@ -254,11 +254,28 @@ func NewMovieInMemRepo() *MovieInMemRepo {
 	}
 }
 
+func (m *MovieInMemRepo) alreadyExists(title string) bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, mov := range m.movies {
+		if mov.Title == title {
+			return true
+		}
+	}
+	return false
+}
+
 func (m *MovieInMemRepo) Insert(movie *Movie) error {
+	if m.alreadyExists(movie.Title) {
+		return errors.New("movie already exists")
+	}
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	movie.ID = m.idCounter
+	movie.CreatedAt = time.Now()
 	movie.Version++
 
 	m.movies[m.idCounter] = movie
@@ -351,7 +368,7 @@ func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([
 		"runtime":  func(i, j int) bool { return filteredList[i].Runtime < filteredList[j].Runtime },
 		"-runtime": func(i, j int) bool { return filteredList[i].Runtime > filteredList[j].Runtime },
 	}
-	sort.Slice(filteredList, sortFuncs[filters.sortColumn()])
+	sort.Slice(filteredList, sortFuncs[filters.Sort])
 
 	off := filters.offset()
 	lim := filters.limit()

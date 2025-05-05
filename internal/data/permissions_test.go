@@ -20,13 +20,13 @@ func TestPerms(t *testing.T) {
 
 	u1perms, err := perms.GetAllForUser(1)
 	assertions.AssertNoError(t, err)
-	assertions.AsserPermissions(t, u1perms, full)
+	assertions.AssertPermissions(t, u1perms, full)
 
 	u2perms, err := perms.GetAllForUser(2)
 	assertions.AssertNoError(t, err)
-	assertions.AsserPermissions(t, u2perms, read)
+	assertions.AssertPermissions(t, u2perms, read)
 
 	u3perms, err := perms.GetAllForUser(3)
 	assertions.AssertNoError(t, err)
-	assertions.AsserPermissions(t, u3perms, write)
+	assertions.AssertPermissions(t, u3perms, write)
 }

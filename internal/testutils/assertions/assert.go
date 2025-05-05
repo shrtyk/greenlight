@@ -57,9 +57,37 @@ func AssertUsers(t testing.TB, got, want *data.User) {
 	}
 }
 
-func AsserPermissions(t testing.TB, got, want data.Permissions) {
+func AssertPermissions(t testing.TB, got, want data.Permissions) {
 	t.Helper()
 	if !slices.Equal(got, want) {
 		t.Errorf("got: %v, wnat: %v", got, want)
+	}
+}
+
+func AssertMovies(t testing.TB, got, want data.Movie) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
+	}
+}
+
+func AssertExpectedError(t testing.TB, err error) {
+	t.Helper()
+	if err == nil {
+		t.Error("expected error but didn't get one")
+	}
+}
+
+func AssertMovieLists(t testing.TB, got, want []*data.Movie) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got: %v, want: %v", got, want)
+	}
+}
+
+func AssertMoviesMetadata(t testing.TB, got, want data.Metadata) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got: %+v, want: %+v", got, want)
 	}
 }

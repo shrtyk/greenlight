@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -310,17 +312,54 @@ func (m *MovieInMemRepo) Update(movie *Movie) error {
 	return nil
 }
 
-func (m *MovieInMemRepo) GetAll(_ string, _ Genres, _ Filters) ([]*Movie, Metadata, error) {
+func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([]*Movie, Metadata, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	moviesList := make([]*Movie, 0, len(m.movies))
-	for _, v := range m.movies {
-		movie := v
-		moviesList = append(moviesList, movie)
+	lowerTitle := strings.ToLower(title)
+
+	filteredList := make([]*Movie, 0, len(m.movies))
+	for _, mov := range m.movies {
+		if lowerTitle != "" && !strings.Contains(strings.ToLower(mov.Title), lowerTitle) {
+			continue
+		}
+
+		if len(genres) > 0 {
+			matches := true
+			for _, g := range genres {
+				if !slices.Contains(mov.Genres, g) {
+					matches = false
+					break
+				}
+			}
+			if !matches {
+				continue
+			}
+		}
+		filteredList = append(filteredList, mov)
 	}
-	sort.Slice(moviesList, func(i, j int) bool {
-		return moviesList[i].ID < moviesList[j].ID
-	})
-	return moviesList, Metadata{}, nil
+
+	totalRecords := len(filteredList)
+
+	sortFuncs := map[string]func(i, j int) bool{
+		"id":       func(i, j int) bool { return filteredList[i].ID < filteredList[j].ID },
+		"-id":      func(i, j int) bool { return filteredList[i].ID > filteredList[j].ID },
+		"title":    func(i, j int) bool { return filteredList[i].Title < filteredList[j].Title },
+		"-title":   func(i, j int) bool { return filteredList[i].Title > filteredList[j].Title },
+		"year":     func(i, j int) bool { return filteredList[i].Year < filteredList[j].Year },
+		"-year":    func(i, j int) bool { return filteredList[i].Year > filteredList[j].Year },
+		"runtime":  func(i, j int) bool { return filteredList[i].Runtime < filteredList[j].Runtime },
+		"-runtime": func(i, j int) bool { return filteredList[i].Runtime > filteredList[j].Runtime },
+	}
+	sort.Slice(filteredList, sortFuncs[filters.sortColumn()])
+
+	off := filters.offset()
+	lim := filters.limit()
+	if off > totalRecords {
+		return []*Movie{}, calculateMetadata(totalRecords, filters.Page, filters.PageSize), nil
+	}
+	end := min(off+lim, totalRecords)
+	pageSlice := filteredList[off:end]
+
+	return pageSlice, calculateMetadata(totalRecords, filters.Page, filters.PageSize), nil
 }

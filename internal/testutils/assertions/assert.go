@@ -56,3 +56,10 @@ func AssertUsers(t testing.TB, got, want *data.User) {
 		t.Errorf("got: %v, want: %v", *got, *want)
 	}
 }
+
+func AsserPermissions(t testing.TB, got, want data.Permissions) {
+	t.Helper()
+	if !slices.Equal(got, want) {
+		t.Errorf("got: %v, wnat: %v", got, want)
+	}
+}

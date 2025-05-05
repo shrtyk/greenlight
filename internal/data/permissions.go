@@ -76,23 +76,35 @@ func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
 
 type PermissionInMemRepo struct {
 	mu          sync.RWMutex
-	permissions map[int]string
+	permissions map[int64]Permissions
 	users       UserReader
 }
 
 func NewPermissionInMemRepo(users UserReader) *PermissionInMemRepo {
 	return &PermissionInMemRepo{
-		permissions: make(map[int]string),
+		permissions: make(map[int64]Permissions),
 		users:       users,
 	}
 }
 
 func (m *PermissionInMemRepo) GetAllForUser(userID int64) (permissions Permissions, err error) {
-	// TODO
-	return nil, nil
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for k, v := range m.permissions {
+		if k == userID {
+			permissions = v
+		}
+	}
+
+	if len(permissions) == 0 {
+		return permissions, ErrRecordNotFound
+	}
+
+	return permissions, err
 }
 
 func (m *PermissionInMemRepo) AddForUser(userID int64, codes ...string) error {
-	// TODO
+	m.permissions[userID] = Permissions(codes)
 	return nil
 }

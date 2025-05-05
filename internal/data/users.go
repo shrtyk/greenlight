@@ -241,16 +241,19 @@ func (u UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 }
 
 type UserInMemRepo struct {
-	mu        sync.RWMutex
-	idCounter int64
-	users     map[int64]*User
-	tokens    *TokenInMemRepo
+	mu          sync.RWMutex
+	idCounter   int64
+	users       map[int64]*User
+	tokens      TokenReader
+	permissions PermissionRepository
 }
 
-func NewUserInMemRepo() *UserInMemRepo {
+func NewUserInMemRepo(tokens TokenReader, perms PermissionRepository) *UserInMemRepo {
 	return &UserInMemRepo{
-		idCounter: 1,
-		users:     make(map[int64]*User),
+		idCounter:   1,
+		users:       make(map[int64]*User),
+		tokens:      tokens,
+		permissions: perms,
 	}
 }
 
@@ -318,12 +321,12 @@ func (m *UserInMemRepo) GetForToken(scope, tokenPlaintext string) (*User, error)
 	defer m.mu.RUnlock()
 
 	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
-	t, exist := m.tokens.FindTokenWithScope(scope, tokenHash)
+	t, exist := m.tokens.GetToken(scope, tokenHash[:])
 	if !exist {
 		return nil, ErrRecordNotFound
 	}
-	user, ok := m.users[t.UserID]
-	if !ok {
+	user, exist := m.users[t.UserID]
+	if !exist {
 		return nil, ErrRecordNotFound
 	}
 

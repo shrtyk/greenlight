@@ -19,6 +19,14 @@ const (
 )
 
 type TokenRepository interface {
+	TokenWriter
+}
+
+type TokenReader interface {
+	GetToken(scope string, hash []byte) (*Token, bool)
+}
+
+type TokenWriter interface {
 	New(userID int64, ttl time.Duration, scope string) (*Token, error)
 	Insert(token *Token) error
 	DeleteAllForUser(scope string, userID int64) error
@@ -99,12 +107,13 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 type TokenInMemRepo struct {
 	mu     sync.RWMutex
 	tokens map[string]*Token
-	users  *UserInMemRepo
+	users  UserReader
 }
 
-func NewTokensInMemRepo() *TokenInMemRepo {
+func NewTokenInMemRepo(users UserReader) *TokenInMemRepo {
 	return &TokenInMemRepo{
 		tokens: make(map[string]*Token),
+		users:  users,
 	}
 }
 
@@ -139,18 +148,7 @@ func (m *TokenInMemRepo) DeleteAllForUser(scope string, userID int64) error {
 	return nil
 }
 
-func (m *TokenInMemRepo) GetToken(hash []byte) (*Token, error) {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	token, exist := m.tokens[string(hash)]
-	if !exist {
-		return nil, ErrRecordNotFound
-	}
-	return token, nil
-}
-
-func (m *TokenInMemRepo) FindTokenWithScope(scope string, hash [32]byte) (*Token, bool) {
+func (m *TokenInMemRepo) GetToken(scope string, hash []byte) (*Token, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

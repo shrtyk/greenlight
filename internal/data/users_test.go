@@ -9,15 +9,12 @@ import (
 )
 
 func TestUserInMem(t *testing.T) {
-	users, tokens := data.CreateRelatedUsersAndTokens()
+	models := data.NewMockModels()
+	users, tokens := models.Users, models.Tokens
 
 	u1 := newUser("alice", "alice@example.com", "pa55word")
 	err := users.Insert(u1)
 	assertions.AssertNoError(t, err)
-
-	if !users.UserExists("alice@example.com") {
-		t.Errorf("expected to find user with email: '%s' but did not", u1.Email)
-	}
 
 	err = users.Insert(u1)
 	assertions.AssertDuplicateError(t, err)

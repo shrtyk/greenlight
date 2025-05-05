@@ -9,6 +9,16 @@ import (
 	"time"
 )
 
+const (
+	MoviesWrite = "movies:write"
+	MoviesRead  = "movies:read"
+)
+
+type PermissionRepository interface {
+	GetAllForUser(userID int64) (permissions Permissions, err error)
+	AddForUser(userID int64, codes ...string) error
+}
+
 type Permissions []string
 
 func (p Permissions) Include(code string) bool {
@@ -65,5 +75,24 @@ func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
 }
 
 type PermissionInMemRepo struct {
-	mu sync.RWMutex
+	mu          sync.RWMutex
+	permissions map[int]string
+	users       UserReader
+}
+
+func NewPermissionInMemRepo(users UserReader) *PermissionInMemRepo {
+	return &PermissionInMemRepo{
+		permissions: make(map[int]string),
+		users:       users,
+	}
+}
+
+func (m *PermissionInMemRepo) GetAllForUser(userID int64) (permissions Permissions, err error) {
+	// TODO
+	return nil, nil
+}
+
+func (m *PermissionInMemRepo) AddForUser(userID int64, codes ...string) error {
+	// TODO
+	return nil
 }

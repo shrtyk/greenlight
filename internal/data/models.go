@@ -16,7 +16,7 @@ type Models struct {
 	Movies      MovieRepository
 	Users       UserRepository
 	Tokens      TokenRepository
-	Permissions PermissionModel
+	Permissions PermissionRepository
 }
 
 func NewModels(db *sql.DB) Models {
@@ -29,17 +29,30 @@ func NewModels(db *sql.DB) Models {
 }
 
 func NewMockModels() Models {
-	users, tokens := CreateRelatedUsersAndTokens()
+	userRepo := &UserInMemRepo{
+		users: make(map[int64]*User),
+	}
+
+	tokenRepo := NewTokenInMemRepo(userRepo)
+	permRepo := NewPermissionInMemRepo(userRepo)
+
+	userRepo.tokens = tokenRepo
+	userRepo.permissions = permRepo
+
 	return Models{
-		Movies: NewMovieInMemRepo(),
-		Users:  users,
-		Tokens: tokens,
+		Movies:      NewMovieInMemRepo(),
+		Users:       userRepo,
+		Tokens:      tokenRepo,
+		Permissions: permRepo,
 	}
 }
 
-func CreateRelatedUsersAndTokens() (users *UserInMemRepo, tokens *TokenInMemRepo) {
-	tokens, users = NewTokensInMemRepo(), NewUserInMemRepo()
+func relateUsersAndTokens(users *UserInMemRepo, tokens *TokenInMemRepo) {
 	tokens.users = users
 	users.tokens = tokens
-	return
+}
+
+func relateUsersAndPermissions(users *UserInMemRepo, permissions *PermissionInMemRepo) {
+	users.permissions = permissions
+	permissions.users = users
 }

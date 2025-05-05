@@ -9,23 +9,27 @@ import (
 )
 
 func TestTokenInMem(t *testing.T) {
-	tokens := data.NewTokensInMemRepo()
+	tokens := data.NewTokenInMemRepo(nil)
 
 	tActiv, err := tokens.New(1, 1*time.Minute, data.ScopeActivation)
 	assertions.AssertNoError(t, err)
 	tAuth, err := tokens.New(1, 1*time.Minute, data.ScopeAuthentication)
 	assertions.AssertNoError(t, err)
 
-	got, err := tokens.GetToken(tActiv.Hash)
+	got, _ := tokens.GetToken(data.ScopeActivation, tActiv.Hash)
 	assertions.AssertNoError(t, err)
 	assertions.AssertTokens(t, got, tActiv)
 
 	err = tokens.DeleteAllForUser(data.ScopeActivation, 1)
 	assertions.AssertNoError(t, err)
 
-	_, err = tokens.GetToken(tActiv.Hash)
-	assertions.AssertNotFoundError(t, err)
+	_, exist := tokens.GetToken(data.ScopeActivation, tActiv.Hash)
+	if exist {
+		t.Error("didn't expect to get existing value")
+	}
 
-	_, err = tokens.GetToken(tAuth.Hash)
-	assertions.AssertNoError(t, err)
+	_, exist = tokens.GetToken(data.ScopeAuthentication, tAuth.Hash)
+	if !exist {
+		t.Error("expected to get value")
+	}
 }

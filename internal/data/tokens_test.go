@@ -8,7 +8,7 @@ import (
 	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 )
 
-func TestTokens(t *testing.T) {
+func TestTokenInMem(t *testing.T) {
 	tokens := data.NewTokensInMemRepo()
 
 	tActiv, err := tokens.New(1, 1*time.Minute, data.ScopeActivation)

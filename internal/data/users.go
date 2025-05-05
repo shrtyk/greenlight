@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
-	"slices"
 	"sync"
 	"time"
 
@@ -98,7 +97,7 @@ type UserRepository interface {
 
 type UserReader interface {
 	GetByEmail(email string) (*User, error)
-	GetForToken(scope, TokenPlaintext string) (*User, error)
+	GetForToken(scope, tokenPlaintext string) (*User, error)
 }
 
 type UserWriter interface {
@@ -314,17 +313,19 @@ func (m *UserInMemRepo) Update(user *User) error {
 	return nil
 }
 
-func (m *UserInMemRepo) GetForToken(scope, TokenPlaintext string) (*User, error) {
-	tokenHash := sha256.Sum256([]byte(TokenPlaintext))
-	tokens := *m.tokens.GetTokens()
+func (m *UserInMemRepo) GetForToken(scope, tokenPlaintext string) (*User, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
 
-	for _, v := range tokens {
-		hashMatches := slices.Equal(v.Hash, tokenHash[:])
-		notExpired := time.Now().Before(v.Expiry)
-		if hashMatches && notExpired && v.Scope == scope {
-			userID := v.UserID
-			return m.users[userID], nil
-		}
+	tokenHash := sha256.Sum256([]byte(tokenPlaintext))
+	t, exist := m.tokens.FindTokenWithScope(scope, tokenHash)
+	if !exist {
+		return nil, ErrRecordNotFound
 	}
-	return nil, ErrRecordNotFound
+	user, ok := m.users[t.UserID]
+	if !ok {
+		return nil, ErrRecordNotFound
+	}
+
+	return user, nil
 }

@@ -15,7 +15,8 @@ import (
 
 func main() {
 	var cfg config
-	initFlags(&cfg)
+	cfg.initFlags()
+
 	displayVersion := flag.Bool("version", false, "Display version and exit")
 	flag.Parse()
 

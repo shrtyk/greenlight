@@ -8,7 +8,7 @@ import (
 	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 )
 
-func TestUsers(t *testing.T) {
+func TestUserInMem(t *testing.T) {
 	users, tokens := data.CreateRelatedUsersAndTokens()
 
 	u1 := newUser("alice", "alice@example.com", "pa55word")

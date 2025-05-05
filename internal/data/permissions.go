@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"slices"
+	"sync"
 	"time"
 )
 
@@ -61,4 +62,8 @@ func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
 
 	_, err := m.DB.ExecContext(ctx, query, userID, codes)
 	return err
+}
+
+type PermissionInMemRepo struct {
+	mu sync.RWMutex
 }

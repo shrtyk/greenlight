@@ -116,7 +116,7 @@ func openPostgresDB(cfg config) (*sql.DB, error) {
 	return db, nil
 }
 
-func initFlags(cfg *config) {
+func (cfg *config) initFlags() {
 	flag.IntVar(&cfg.port, "port", 4000, "Api server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production)")
 

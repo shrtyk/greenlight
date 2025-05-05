@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
+	"slices"
 	"sync"
 	"time"
 
@@ -96,7 +97,7 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 }
 
 type TokenInMemRepo struct {
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	tokens map[string]*Token
 	users  *UserInMemRepo
 }
@@ -139,6 +140,9 @@ func (m *TokenInMemRepo) DeleteAllForUser(scope string, userID int64) error {
 }
 
 func (m *TokenInMemRepo) GetToken(hash []byte) (*Token, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	token, exist := m.tokens[string(hash)]
 	if !exist {
 		return nil, ErrRecordNotFound
@@ -146,6 +150,16 @@ func (m *TokenInMemRepo) GetToken(hash []byte) (*Token, error) {
 	return token, nil
 }
 
-func (m *TokenInMemRepo) GetTokens() *map[string]*Token {
-	return &m.tokens
+func (m *TokenInMemRepo) FindTokenWithScope(scope string, hash [32]byte) (*Token, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	for _, t := range m.tokens {
+		hashMatches := slices.Equal(t.Hash, hash[:])
+		notExpired := time.Now().Before(t.Expiry)
+		if hashMatches && notExpired && t.Scope == scope {
+			return t, true
+		}
+	}
+	return nil, false
 }

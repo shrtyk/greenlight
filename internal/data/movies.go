@@ -358,17 +358,7 @@ func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([
 
 	totalRecords := len(filteredList)
 
-	sortFuncs := map[string]func(i, j int) bool{
-		"id":       func(i, j int) bool { return filteredList[i].ID < filteredList[j].ID },
-		"-id":      func(i, j int) bool { return filteredList[i].ID > filteredList[j].ID },
-		"title":    func(i, j int) bool { return filteredList[i].Title < filteredList[j].Title },
-		"-title":   func(i, j int) bool { return filteredList[i].Title > filteredList[j].Title },
-		"year":     func(i, j int) bool { return filteredList[i].Year < filteredList[j].Year },
-		"-year":    func(i, j int) bool { return filteredList[i].Year > filteredList[j].Year },
-		"runtime":  func(i, j int) bool { return filteredList[i].Runtime < filteredList[j].Runtime },
-		"-runtime": func(i, j int) bool { return filteredList[i].Runtime > filteredList[j].Runtime },
-	}
-	sort.Slice(filteredList, sortFuncs[filters.Sort])
+	sort.Slice(filteredList, getSortFunc(filteredList, filters.Sort))
 
 	off := filters.offset()
 	lim := filters.limit()
@@ -379,4 +369,27 @@ func (m *MovieInMemRepo) GetAll(title string, genres Genres, filters Filters) ([
 	pageSlice := filteredList[off:end]
 
 	return pageSlice, calculateMetadata(totalRecords, filters.Page, filters.PageSize), nil
+}
+
+func getSortFunc(movies []*Movie, sortParam string) func(i, j int) bool {
+	switch sortParam {
+	case "id":
+		return func(i, j int) bool { return movies[i].ID < movies[j].ID }
+	case "-id":
+		return func(i, j int) bool { return movies[i].ID > movies[j].ID }
+	case "title":
+		return func(i, j int) bool { return movies[i].Title < movies[j].Title }
+	case "-title":
+		return func(i, j int) bool { return movies[i].Title > movies[j].Title }
+	case "year":
+		return func(i, j int) bool { return movies[i].Year < movies[j].Year }
+	case "-year":
+		return func(i, j int) bool { return movies[i].Year > movies[j].Year }
+	case "runtime":
+		return func(i, j int) bool { return movies[i].Runtime < movies[j].Runtime }
+	case "-runtime":
+		return func(i, j int) bool { return movies[i].Runtime > movies[j].Runtime }
+	default:
+		return func(i, j int) bool { return false }
+	}
 }

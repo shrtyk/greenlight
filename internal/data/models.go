@@ -46,13 +46,3 @@ func NewMockModels() Models {
 		Permissions: permRepo,
 	}
 }
-
-func relateUsersAndTokens(users *UserInMemRepo, tokens *TokenInMemRepo) {
-	tokens.users = users
-	users.tokens = tokens
-}
-
-func relateUsersAndPermissions(users *UserInMemRepo, permissions *PermissionInMemRepo) {
-	users.permissions = permissions
-	permissions.users = users
-}

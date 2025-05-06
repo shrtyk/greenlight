@@ -12,8 +12,9 @@ func TestUserInMem(t *testing.T) {
 	models := data.NewMockModels()
 	users, tokens := models.Users, models.Tokens
 
-	u1 := newUser("alice", "alice@example.com", "pa55word")
-	err := users.Insert(u1)
+	u1, err := newUser("alice", "alice@example.com", "pa55word")
+	assertions.AssertNoError(t, err)
+	err = users.Insert(u1)
 	assertions.AssertNoError(t, err)
 
 	err = users.Insert(u1)
@@ -43,12 +44,14 @@ func TestUserInMem(t *testing.T) {
 	assertions.AssertNotFoundError(t, err)
 }
 
-func newUser(name, email, plainPassword string) *data.User {
+func newUser(name, email, plainPassword string) (*data.User, error) {
 	password := data.Password{}
-	password.Set(plainPassword)
+	if err := password.Set(plainPassword); err != nil {
+		return nil, err
+	}
 	return &data.User{
 		Name:     name,
 		Email:    email,
 		Password: password,
-	}
+	}, nil
 }

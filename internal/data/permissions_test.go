@@ -14,9 +14,10 @@ func TestPerms(t *testing.T) {
 	read := data.Permissions{"movies:read"}
 	write := data.Permissions{"movies:write"}
 
-	perms.AddForUser(1, full...)
-	perms.AddForUser(2, read...)
-	perms.AddForUser(3, write...)
+	err := perms.AddForUser(1, full...)
+	assertions.AssertNoError(t, err)
+	_ = perms.AddForUser(2, read...)
+	_ = perms.AddForUser(3, write...)
 
 	u1perms, err := perms.GetAllForUser(1)
 	assertions.AssertNoError(t, err)

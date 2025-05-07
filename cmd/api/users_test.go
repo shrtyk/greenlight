@@ -30,8 +30,8 @@ func TestUsers(t *testing.T) {
 	models := data.NewMockModels()
 	limiter := NewMockLimiter(false)
 
-	mailsData := &[]any{}
-	mailer := mailer.NewMockMailer(mailsData)
+	mailData := &[]mailer.MailData{}
+	mailer := mailer.NewMockMailer(mailData)
 
 	app := newApplication(
 		withConfig(cfg),
@@ -44,12 +44,13 @@ func TestUsers(t *testing.T) {
 	server := app.routes()
 
 	cases := []struct {
-		name   string
-		method string
-		path   string
-		body   any
-		want   envelope
-		code   int
+		name      string
+		method    string
+		path      string
+		body      any
+		want      envelope
+		code      int
+		lastToken string
 	}{
 		{
 			name:   "user creation",
@@ -104,4 +105,13 @@ func TestUsers(t *testing.T) {
 			assertions.AssertStatusCode(t, rw.Code, c.code)
 		})
 	}
+}
+
+func getLastActivationToken(data *[]mailer.MailData) string {
+	ln := len(*data)
+	if ln == 0 {
+		return ""
+	}
+	lastToken := (*data)[ln-1]
+	return lastToken.ActivationToken
 }

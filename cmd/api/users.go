@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shortykevich/greenlight/internal/mailer"
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
@@ -60,9 +61,9 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	app.background(func() {
-		data := map[string]any{
-			"userName":        user.Name,
-			"activationToken": token.Plaintext,
+		data := mailer.MailData{
+			UserName:        user.Name,
+			ActivationToken: token.Plaintext,
 		}
 		if err := app.mailer.Send(user.Email, "user_welcome.tmpl", data); err != nil {
 			app.logger.Error(err.Error())

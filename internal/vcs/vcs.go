@@ -31,7 +31,7 @@ func Version(env string) string {
 			}
 		}
 	}
-	fmt.Println(revision, modified)
+
 	if modified {
 		return fmt.Sprintf("%s-dirty", revision)
 	}

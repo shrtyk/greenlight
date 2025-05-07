@@ -3,6 +3,7 @@ package mailer
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"html/template"
 	"time"
 
@@ -14,6 +15,11 @@ var templateFS embed.FS
 
 type MailWriter interface {
 	Send(recipient, templateFile string, data any) error
+}
+
+type MailData struct {
+	UserName        string `json:"userName"`
+	ActivationToken string `json:"activationToken"`
 }
 
 type Mailer struct {
@@ -67,18 +73,22 @@ func (m *Mailer) Send(recipient, templateFile string, data any) error {
 }
 
 type MockMailer struct {
-	sent   *[]any
+	tokens *[]MailData
 	sender string
 }
 
-func NewMockMailer(mailsData *[]any) MailWriter {
+func NewMockMailer(tokens *[]MailData) MailWriter {
 	return &MockMailer{
-		sent:   mailsData,
+		tokens: tokens,
 		sender: "mock sender",
 	}
 }
 
 func (m *MockMailer) Send(recipient, templateFile string, data any) error {
-	*m.sent = append(*m.sent, data)
+	val, ok := data.(MailData)
+	if !ok {
+		return fmt.Errorf("wrong type")
+	}
+	*m.tokens = append(*m.tokens, val)
 	return nil
 }

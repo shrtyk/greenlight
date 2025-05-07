@@ -16,6 +16,7 @@ import (
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
+// Wrapper for http responses
 type envelope map[string]any
 
 func (app *application) readIDParam(r *http.Request) (int64, error) {

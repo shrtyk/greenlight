@@ -246,15 +246,7 @@ type UserInMemRepo struct {
 	users       map[int64]*User
 	tokens      TokenReader
 	permissions PermissionRepository
-}
-
-func NewUserInMemRepo(tokens TokenReader, perms PermissionRepository) *UserInMemRepo {
-	return &UserInMemRepo{
-		idCounter:   1,
-		users:       make(map[int64]*User),
-		tokens:      tokens,
-		permissions: perms,
-	}
+	clock       Clock
 }
 
 func (m *UserInMemRepo) UserExists(email string) bool {
@@ -288,7 +280,7 @@ func (m *UserInMemRepo) Insert(user *User) error {
 
 	user.ID = m.idCounter
 	user.Version = 1
-	user.CreatedAt = time.Now()
+	user.CreatedAt = m.clock.Now()
 
 	m.users[m.idCounter] = user
 	m.idCounter++

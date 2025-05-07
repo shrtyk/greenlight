@@ -30,7 +30,9 @@ func NewModels(db *sql.DB) Models {
 
 func NewMockModels() Models {
 	userRepo := &UserInMemRepo{
-		users: make(map[int64]*User),
+		idCounter: 1,
+		users:     make(map[int64]*User),
+		clock:     MockClock{},
 	}
 
 	tokenRepo := NewTokenInMemRepo(userRepo)

@@ -107,10 +107,14 @@ func (r *rateLimiter) getBurst() int {
 	return r.cfg.burst
 }
 
-type MockLimiter struct{}
+type MockLimiter struct {
+	enable bool
+}
 
-func NewMockLimiter() RateLimiter {
-	return &MockLimiter{}
+func NewMockLimiter(enable bool) RateLimiter {
+	return &MockLimiter{
+		enable: enable,
+	}
 }
 
 func (m *MockLimiter) Allow(_ string) bool {
@@ -118,7 +122,7 @@ func (m *MockLimiter) Allow(_ string) bool {
 }
 
 func (m *MockLimiter) IsEnabled() bool {
-	return false
+	return m.enable
 }
 
 func (m *MockLimiter) RunCleanup(_ context.Context) {}

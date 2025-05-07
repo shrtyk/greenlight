@@ -44,9 +44,9 @@ type config struct {
 	}
 }
 
-type Option func(*application)
+type option func(*application)
 
-func newApplication(opts ...Option) *application {
+func newApplication(opts ...option) *application {
 	app := new(application)
 
 	for _, opt := range opts {
@@ -56,37 +56,37 @@ func newApplication(opts ...Option) *application {
 	return app
 }
 
-func withConfig(cfg config) Option {
+func withConfig(cfg config) option {
 	return func(app *application) {
 		app.config = cfg
 	}
 }
 
-func withVersion(version string) Option {
+func withVersion(version string) option {
 	return func(app *application) {
 		app.version = version
 	}
 }
 
-func withLogger(log *slog.Logger) Option {
+func withLogger(log *slog.Logger) option {
 	return func(app *application) {
 		app.logger = log
 	}
 }
 
-func withModels(models data.Models) Option {
+func withModels(models data.Models) option {
 	return func(app *application) {
 		app.models = models
 	}
 }
 
-func withRateLimiter(limiter RateLimiter) Option {
+func withRateLimiter(limiter RateLimiter) option {
 	return func(app *application) {
 		app.limiter = limiter
 	}
 }
 
-func withMailer(mailer mailer.Mailer) Option {
+func withMailer(mailer mailer.Mailer) option {
 	return func(app *application) {
 		app.mailer = mailer
 	}

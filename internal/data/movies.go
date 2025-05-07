@@ -245,12 +245,14 @@ type MovieInMemRepo struct {
 	mu        sync.RWMutex
 	idCounter int64
 	movies    map[int64]*Movie
+	clock     Clock
 }
 
 func NewMovieInMemRepo() *MovieInMemRepo {
 	return &MovieInMemRepo{
 		idCounter: 1,
 		movies:    make(map[int64]*Movie),
+		clock:     MockClock{},
 	}
 }
 
@@ -275,7 +277,7 @@ func (m *MovieInMemRepo) Insert(movie *Movie) error {
 	defer m.mu.Unlock()
 
 	movie.ID = m.idCounter
-	movie.CreatedAt = time.Now()
+	movie.CreatedAt = m.clock.Now()
 	movie.Version++
 
 	m.movies[m.idCounter] = movie

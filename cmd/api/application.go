@@ -24,7 +24,7 @@ type application struct {
 	logger  *slog.Logger
 	models  data.Models
 	limiter RateLimiter
-	mailer  mailer.Mailer
+	mailer  mailer.MailWriter
 }
 
 type config struct {
@@ -86,7 +86,7 @@ func withRateLimiter(limiter RateLimiter) option {
 	}
 }
 
-func withMailer(mailer mailer.Mailer) option {
+func withMailer(mailer mailer.MailWriter) option {
 	return func(app *application) {
 		app.mailer = mailer
 	}

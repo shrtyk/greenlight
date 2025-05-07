@@ -12,16 +12,20 @@ import (
 //go:embed "templates"
 var templateFS embed.FS
 
+type MailWriter interface {
+	Send(recipient, templateFile string, data any) error
+}
+
 type Mailer struct {
 	dialer *mail.Dialer
 	sender string
 }
 
-func New(host string, port int, username, password, sender string) Mailer {
+func New(host string, port int, username, password, sender string) MailWriter {
 	dialer := mail.NewDialer(host, port, username, password)
 	dialer.Timeout = 10 * time.Second
 
-	return Mailer{
+	return &Mailer{
 		dialer: dialer,
 		sender: sender,
 	}
@@ -59,5 +63,22 @@ func (m *Mailer) Send(recipient, templateFile string, data any) error {
 		return err
 	}
 
+	return nil
+}
+
+type MockMailer struct {
+	sent   *[]any
+	sender string
+}
+
+func NewMockMailer(mailsData *[]any) MailWriter {
+	return &MockMailer{
+		sent:   mailsData,
+		sender: "mock sender",
+	}
+}
+
+func (m *MockMailer) Send(recipient, templateFile string, data any) error {
+	*m.sent = append(*m.sent, data)
 	return nil
 }

@@ -1,13 +1,14 @@
 package main
 
 import (
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 
 	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shortykevich/greenlight/internal/mailer"
 	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 	"github.com/shortykevich/greenlight/internal/testutils/helpers"
 )
@@ -18,53 +19,89 @@ type userCreateBody struct {
 	Password string `json:"password"`
 }
 
+type userUpdateBody struct {
+	Email    string `json:"email,omitempty"`
+	Name     string `json:"name,omitempty"`
+	Password string `json:"password,omitempty"`
+}
+
 func TestUsers(t *testing.T) {
 	cfg := config{env: "development"}
 	models := data.NewMockModels()
 	limiter := NewMockLimiter(false)
+
+	mailsData := &[]any{}
+	mailer := mailer.NewMockMailer(mailsData)
 
 	app := newApplication(
 		withConfig(cfg),
 		withLogger(slog.Default()),
 		withModels(models),
 		withRateLimiter(limiter),
+		withMailer(mailer),
 	)
 
 	server := app.routes()
 
-	t.Run("user creation", func(t *testing.T) {
-		input := userCreateBody{
-			Email:    "shortyk@example.com",
-			Name:     "shortyk",
-			Password: "pa55word",
-		}
-
-		user1Input := helpers.MustJSON(t, input)
-
-		rw := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodPost, "/v1/users", user1Input)
-		assertions.AssertNoError(t, err)
-
-		server.ServeHTTP(rw, req)
-
-		gotUser := helpers.ReadResp[data.User](t, rw.Result())
-
-		want := envelope{
-			"user": data.User{
-				ID:        1,
-				Email:     "shortyk@example.com",
-				Name:      "shortyk",
-				CreatedAt: data.MockTimeStamp,
-				Activated: false,
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   any
+		want   envelope
+		code   int
+	}{
+		{
+			name:   "user creation",
+			method: http.MethodPost,
+			path:   "/v1/users",
+			body: userCreateBody{
+				Email:    "shortyk@example.com",
+				Name:     "shortyk",
+				Password: "pa55word",
 			},
-		}
+			want: envelope{
+				"user": data.User{
+					ID:        1,
+					Email:     "shortyk@example.com",
+					Name:      "shortyk",
+					CreatedAt: data.MockTimeStamp,
+					Activated: false,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:   "existed user creation",
+			method: http.MethodPost,
+			path:   "/v1/users",
+			body: userCreateBody{
+				Email:    "shortyk@example.com",
+				Name:     "shortyk",
+				Password: "pa55word",
+			},
+			want: envelope{
+				"error": map[string]string{
+					"email": "a user with this email address already exists",
+				},
+			},
+			code: http.StatusUnprocessableEntity,
+		},
+	}
 
-		if !reflect.DeepEqual(gotUser["user"], want["user"]) {
-			t.Errorf("\ngot : %+v\nwant: %+v", gotUser["user"], want)
-		}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req, err := http.NewRequest(http.MethodPost, "/v1/users", helpers.MustJSON(t, c.body))
+			assertions.AssertNoError(t, err)
 
-		if rw.Code != http.StatusCreated {
-			t.Errorf("got: %v, want: %v", rw.Code, http.StatusCreated)
-		}
-	})
+			server.ServeHTTP(rw, req)
+
+			want, err := io.ReadAll(helpers.MustJSON(t, c.want))
+			assertions.AssertNoError(t, err)
+
+			assertions.AssertStrings(t, rw.Body.String(), string(want))
+			assertions.AssertStatusCode(t, rw.Code, c.code)
+		})
+	}
 }

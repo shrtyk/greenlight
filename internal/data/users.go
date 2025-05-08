@@ -249,6 +249,14 @@ type UserInMemRepo struct {
 	clock       Clock
 }
 
+func NewUserInMemRepo() *UserInMemRepo {
+	return &UserInMemRepo{
+		idCounter: 1,
+		users:     make(map[int64]*User),
+		clock:     MockClock{},
+	}
+}
+
 func (m *UserInMemRepo) UserExists(email string) bool {
 	for _, user := range m.users {
 		if user.Email == email {

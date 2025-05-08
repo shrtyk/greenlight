@@ -13,28 +13,7 @@ import (
 	"github.com/shortykevich/greenlight/internal/testutils/helpers"
 )
 
-type userCreateBody struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
-}
-
-type userUpdateBody struct {
-	Email    string `json:"email,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Password string `json:"password,omitempty"`
-}
-
-type activationToken struct {
-	TokenPlainText string `json:"token"`
-}
-
-type userAuthenticationBody struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func TestUsers(t *testing.T) {
+func TestApi(t *testing.T) {
 	cfg := config{env: "development"}
 	models := data.NewMockModels()
 	limiter := NewMockLimiter(false)
@@ -53,12 +32,13 @@ func TestUsers(t *testing.T) {
 	server := app.routes()
 
 	cases := []struct {
-		name   string
-		method string
-		path   string
-		body   any
-		want   envelope
-		code   int
+		name    string
+		method  string
+		path    string
+		headers map[string][]string
+		body    any
+		want    envelope
+		code    int
 	}{
 		{
 			name:   "user creation",
@@ -97,24 +77,6 @@ func TestUsers(t *testing.T) {
 			code: http.StatusUnprocessableEntity,
 		},
 		{
-			name:   "user activation",
-			method: http.MethodPut,
-			path:   "/v1/users/activated",
-			body: activationToken{
-				TokenPlainText: data.MockToken,
-			},
-			want: envelope{
-				"user": data.User{
-					ID:        1,
-					Email:     "shortyk@example.com",
-					Name:      "shortyk",
-					CreatedAt: data.MockTimeStamp,
-					Activated: true,
-				},
-			},
-			code: http.StatusOK,
-		},
-		{
 			name:   "user activation without provided token",
 			method: http.MethodPut,
 			path:   "/v1/users/activated",
@@ -129,7 +91,7 @@ func TestUsers(t *testing.T) {
 			code: http.StatusUnprocessableEntity,
 		},
 		{
-			name:   "user activation with wrong token",
+			name:   "user activation with long token",
 			method: http.MethodPut,
 			path:   "/v1/users/activated",
 			body: activationToken{
@@ -141,22 +103,6 @@ func TestUsers(t *testing.T) {
 				},
 			},
 			code: http.StatusUnprocessableEntity,
-		},
-		{
-			name:   "user authentication",
-			method: http.MethodPost,
-			path:   "/v1/tokens/authentication",
-			body: userAuthenticationBody{
-				Email:    "shortyk@example.com",
-				Password: "pa55word",
-			},
-			want: envelope{
-				"authentication_token": data.Token{
-					Plaintext: data.MockToken,
-					Expiry:    data.MockTimeStamp,
-				},
-			},
-			code: http.StatusCreated,
 		},
 		{
 			name:   "user authentication with short password",
@@ -184,7 +130,7 @@ func TestUsers(t *testing.T) {
 			want: envelope{
 				"error": "invalid authentication credentials",
 			},
-			code: http.StatusUnprocessableEntity,
+			code: http.StatusUnauthorized,
 		},
 		{
 			name:   "user authentication with empty password",
@@ -202,7 +148,7 @@ func TestUsers(t *testing.T) {
 			code: http.StatusUnprocessableEntity,
 		},
 		{
-			name:   "user authentication with wrong formed email",
+			name:   "user authentication with wrong formated email",
 			method: http.MethodPost,
 			path:   "/v1/tokens/authentication",
 			body: userAuthenticationBody{
@@ -232,5 +178,60 @@ func TestUsers(t *testing.T) {
 			assertions.AssertStrings(t, rw.Body.String(), string(want))
 			assertions.AssertStatusCode(t, rw.Code, c.code)
 		})
+	}
+
+	t.Run("test user authentication", func(t *testing.T) {
+		rw := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodPost, "/v1/tokens/authentication", helpers.MustJSON(t, userAuthenticationBody{
+			Email:    "shortyk@example.com",
+			Password: "pa55word",
+		}))
+		assertions.AssertNoError(t, err)
+
+		server.ServeHTTP(rw, req)
+
+		plainText := app.models.Tokens.GetUserTokens(1).Authentication
+		want, err := io.ReadAll(helpers.MustJSON(t, envelope{
+			"authentication_token": data.Token{
+				Plaintext: *plainText,
+				Expiry:    data.MockTimeStamp,
+			}}))
+		assertions.AssertNoError(t, err)
+
+		assertions.AssertStrings(t, rw.Body.String(), string(want))
+	})
+
+	t.Run("test user activation", func(t *testing.T) {
+		rw := httptest.NewRecorder()
+		req, err := http.NewRequest(http.MethodPut, "/v1/users/activated", helpers.MustJSON(t, activationToken{
+			TokenPlainText: *app.models.Tokens.GetUserTokens(1).Activation,
+		}))
+		assertions.AssertNoError(t, err)
+
+		server.ServeHTTP(rw, req)
+
+		want, err := io.ReadAll(helpers.MustJSON(t, envelope{
+			"user": data.User{
+				ID:        1,
+				Email:     "shortyk@example.com",
+				Name:      "shortyk",
+				CreatedAt: data.MockTimeStamp,
+				Activated: true,
+			},
+		}))
+		assertions.AssertNoError(t, err)
+
+		assertions.AssertStrings(t, rw.Body.String(), string(want))
+	})
+
+}
+
+func setRequestHeaders(t testing.TB, req *http.Request, headers map[string][]string) {
+	t.Helper()
+
+	for header, values := range headers {
+		for _, val := range values {
+			req.Header.Add(header, val)
+		}
 	}
 }

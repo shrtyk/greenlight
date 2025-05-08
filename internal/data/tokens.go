@@ -6,7 +6,6 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/base32"
-	"slices"
 	"sync"
 	"time"
 
@@ -22,10 +21,12 @@ const (
 
 type TokenRepository interface {
 	TokenWriter
+	TokenReader
 }
 
 type TokenReader interface {
 	GetToken(scope string, hash []byte) (*Token, bool)
+	GetUserTokens(userID int64) *Tokens
 }
 
 type TokenWriter interface {
@@ -106,6 +107,14 @@ func (m TokenModel) DeleteAllForUser(scope string, userID int64) error {
 	return err
 }
 
+func (m TokenModel) GetToken(scope string, hash []byte) (*Token, bool) {
+	return nil, false
+}
+
+func (m TokenModel) GetUserTokens(userID int64) *Tokens {
+	return nil
+}
+
 type TokenInMemRepo struct {
 	mu     sync.RWMutex
 	tokens map[string]*Token
@@ -119,21 +128,14 @@ func NewTokenInMemRepo(users UserReader) *TokenInMemRepo {
 	}
 }
 
-func generateMockToken(userID int64, _ time.Duration, scope string) *Token {
-	hash := sha256.Sum256([]byte("abcdefghijklmnopqrstuvwxyz"))
-	return &Token{
-		UserID:    userID,
-		Expiry:    MockTimeStamp,
-		Scope:     scope,
-		Plaintext: "abcdefghijklmnopqrstuvwxyz",
-		Hash:      hash[:],
-	}
-}
-
 func (m *TokenInMemRepo) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
-	token := generateMockToken(userID, ttl, scope)
+	token, err := generateToken(userID, ttl, scope)
+	if err != nil {
+		return nil, err
+	}
 
-	err := m.Insert(token)
+	token.Expiry = MockTimeStamp
+	err = m.Insert(token)
 	return token, err
 }
 
@@ -160,14 +162,36 @@ func (m *TokenInMemRepo) DeleteAllForUser(scope string, userID int64) error {
 
 func (m *TokenInMemRepo) GetToken(scope string, hash []byte) (*Token, bool) {
 	m.mu.RLock()
+	t, ok := m.tokens[string(hash)]
+	m.mu.RUnlock()
+
+	if !ok || t.Scope != scope || time.Now().After(t.Expiry) {
+		return nil, false
+	}
+	return t, true
+}
+
+type Tokens struct {
+	Activation     *string
+	Authentication *string
+}
+
+func (m *TokenInMemRepo) GetUserTokens(userID int64) *Tokens {
+	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	for _, t := range m.tokens {
-		hashMatches := slices.Equal(t.Hash, hash[:])
-		notExpired := time.Now().Before(t.Expiry)
-		if hashMatches && notExpired && t.Scope == scope {
-			return t, true
+	tokens := new(Tokens)
+	for _, v := range m.tokens {
+		if v.UserID != userID {
+			continue
+		}
+		t := v.Plaintext
+		switch v.Scope {
+		case ScopeActivation:
+			tokens.Activation = &t
+		case ScopeAuthentication:
+			tokens.Authentication = &t
 		}
 	}
-	return nil, false
+	return tokens
 }

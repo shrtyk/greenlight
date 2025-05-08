@@ -10,12 +10,18 @@ import (
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
+type userCreateBody struct {
+	Email    string `json:"email"`
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+type activationToken struct {
+	TokenPlainText string `json:"token"`
+}
+
 func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var input userCreateBody
 
 	if err := app.readJSON(w, r, &input); err != nil {
 		app.badRequestResponse(w, r, err)
@@ -77,9 +83,7 @@ func (app *application) registerUserHandler(w http.ResponseWriter, r *http.Reque
 }
 
 func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		TokenPlainText string `json:"token"`
-	}
+	var input activationToken
 
 	if err := app.readJSON(w, r, &input); err != nil {
 		app.badRequestResponse(w, r, err)

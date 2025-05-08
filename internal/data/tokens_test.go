@@ -9,7 +9,8 @@ import (
 )
 
 func TestTokenInMem(t *testing.T) {
-	tokens := data.NewTokenInMemRepo(nil)
+	models := data.NewMockModels()
+	tokens := models.Tokens
 
 	tActiv, err := tokens.New(1, 1*time.Minute, data.ScopeActivation)
 	assertions.AssertNoError(t, err)

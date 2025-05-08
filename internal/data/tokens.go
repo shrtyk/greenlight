@@ -14,6 +14,8 @@ import (
 )
 
 const (
+	MockToken = "abcdefghijklmnopqrstuvwxyz"
+
 	ScopeActivation     = "activation"
 	ScopeAuthentication = "authentication"
 )
@@ -117,13 +119,21 @@ func NewTokenInMemRepo(users UserReader) *TokenInMemRepo {
 	}
 }
 
-func (m *TokenInMemRepo) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
-	token, err := generateToken(userID, ttl, scope)
-	if err != nil {
-		return nil, err
+func generateMockToken(userID int64, _ time.Duration, scope string) *Token {
+	hash := sha256.Sum256([]byte("abcdefghijklmnopqrstuvwxyz"))
+	return &Token{
+		UserID:    userID,
+		Expiry:    MockTimeStamp,
+		Scope:     scope,
+		Plaintext: "abcdefghijklmnopqrstuvwxyz",
+		Hash:      hash[:],
 	}
+}
 
-	err = m.Insert(token)
+func (m *TokenInMemRepo) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
+	token := generateMockToken(userID, ttl, scope)
+
+	err := m.Insert(token)
 	return token, err
 }
 

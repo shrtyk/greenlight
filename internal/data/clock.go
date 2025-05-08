@@ -2,7 +2,7 @@ package data
 
 import "time"
 
-var MockTimeStamp = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+var MockTimeStamp = time.Date(3000, 1, 1, 12, 0, 0, 0, time.UTC)
 
 type Clock interface {
 	Now() time.Time

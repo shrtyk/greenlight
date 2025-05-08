@@ -123,7 +123,7 @@ func (app *application) activateUserHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = app.writeJSON(w, envelope{"user": user}, http.StatusLocked, nil)
+	err = app.writeJSON(w, envelope{"user": user}, http.StatusOK, nil)
 	if err != nil {
 		app.serverErrorResponse(w, r, err)
 	}

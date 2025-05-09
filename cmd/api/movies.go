@@ -16,6 +16,13 @@ type movieCreateBody struct {
 	Genres  []string     `json:"genres"`
 }
 
+type movieUpdateBody struct {
+	Title   *string       `json:"title"`
+	Year    *int32        `json:"year"`
+	Runtime *data.Runtime `json:"runtime"`
+	Genres  []string      `json:"genres"`
+}
+
 type movieGetAllBody struct {
 	Title  string
 	Genres data.Genres
@@ -147,12 +154,7 @@ func (app *application) updateMovieHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	var input struct {
-		Title   *string       `json:"title"`
-		Year    *int32        `json:"year"`
-		Runtime *data.Runtime `json:"runtime"`
-		Genres  []string      `json:"genres"`
-	}
+	var input movieUpdateBody
 
 	if err = app.readJSON(w, r, &input); err != nil {
 		app.badRequestResponse(w, r, err)

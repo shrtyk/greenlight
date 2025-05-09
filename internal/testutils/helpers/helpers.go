@@ -10,6 +10,10 @@ import (
 func MustJSON(t *testing.T, v any) *bytes.Reader {
 	t.Helper()
 
+	if v == nil {
+		return bytes.NewReader([]byte{})
+	}
+
 	b, err := json.Marshal(v)
 	if err != nil {
 		t.Fatalf("marshal JSON: %v", err)

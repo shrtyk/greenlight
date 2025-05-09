@@ -11,6 +11,7 @@ import (
 	"github.com/shortykevich/greenlight/internal/mailer"
 	"github.com/shortykevich/greenlight/internal/testutils/assertions"
 	"github.com/shortykevich/greenlight/internal/testutils/helpers"
+	"github.com/shortykevich/greenlight/internal/validator"
 )
 
 func TestApi(t *testing.T) {
@@ -464,76 +465,162 @@ func TestApi(t *testing.T) {
 			want: envelope{
 				"error": "your user account doesn't have the necessary permissions to access this resource",
 			},
-			code: http.StatusUnauthorized,
+			code: http.StatusForbidden,
 		},
-		// {
-		// 	name:   "create movie 2",
-		// 	method: http.MethodPost,
-		// 	path:   "/v1/movies",
-		// 	body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"]}`,
-		// 	want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"],"version":1}}`,
-		// 	code:   http.StatusCreated,
-		// },
-		// {
-		// 	name:   "create movie 3",
-		// 	method: http.MethodPost,
-		// 	path:   "/v1/movies",
-		// 	body:   `{"title":"Deadpool","year":2016, "runtime":"108 mins","genres":["action","comedy"]}`,
-		// 	want:   `{"movie":{"id":3,"title":"Deadpool","year":2016,"runtime":"108 mins","genres":["action","comedy"],"version":1}}`,
-		// 	code:   http.StatusCreated,
-		// },
-		// {
-		// 	name:   "create movie 4",
-		// 	method: http.MethodPost,
-		// 	path:   "/v1/movies",
-		// 	body:   `{"title":"The Breakfast Club","year":1986, "runtime":"96 mins","genres":["drama"]}`,
-		// 	want:   `{"movie":{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}}`,
-		// 	code:   http.StatusCreated,
-		// },
-		// {
-		// 	name:   "delete movie",
-		// 	method: http.MethodDelete,
-		// 	path:   "/v1/movies/3",
-		// 	want:   `{"message:":"movie successfully deleted"}`,
-		// 	code:   http.StatusOK,
-		// },
-		// {
-		// 	name:   "get wrong movie",
-		// 	method: http.MethodGet,
-		// 	path:   "/v1/movies/3",
-		// 	want:   `{"error":"the requested resource could not be found"}`,
-		// 	code:   http.StatusNotFound,
-		// },
-		// {
-		// 	name:   "update movie",
-		// 	method: http.MethodPatch,
-		// 	path:   "/v1/movies/2",
-		// 	body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"]}`,
-		// 	want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2}}`,
-		// 	code:   http.StatusCreated,
-		// },
-		// {
-		// 	name:   "update with empty body",
-		// 	method: http.MethodPatch,
-		// 	path:   "/v1/movies/2",
-		// 	want:   `{"error":"body must not be empty"}`,
-		// 	code:   http.StatusBadRequest,
-		// },
-		// {
-		// 	name:   "partial update",
-		// 	method: http.MethodPatch,
-		// 	path:   "/v1/movies/1",
-		// 	body:   `{"year":2000}`,
-		// 	want:   `{"movie":{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2}}`,
-		// 	code:   http.StatusCreated,
-		// },
-		// {
-		// 	name:   "get all movies",
-		// 	method: http.MethodGet,
-		// 	path:   "/v1/movies",
-		// 	want:   `{"metadata":{},"movies":[{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
-		// 	code:   http.StatusOK,
-		// },
+		{
+			name:    "create movie 3",
+			method:  http.MethodPost,
+			path:    "/v1/movies",
+			headers: bobHeader,
+			body: movieCreateBody{
+				Title:   "Deadpool",
+				Year:    2016,
+				Runtime: 108,
+				Genres:  []string{"action", "comedy"},
+			},
+			want: envelope{
+				"movie": data.Movie{
+					ID:      3,
+					Title:   "Deadpool",
+					Year:    2016,
+					Runtime: 108,
+					Genres:  []string{"action", "comedy"},
+					Version: 1,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "create movie 4",
+			method:  http.MethodPost,
+			path:    "/v1/movies",
+			headers: bobHeader,
+			body: movieCreateBody{
+				Title:   "The Breakfast Club",
+				Year:    1986,
+				Runtime: 96,
+				Genres:  []string{"drama"},
+			},
+			want: envelope{
+				"movie": data.Movie{
+					ID:      4,
+					Title:   "The Breakfast Club",
+					Year:    1986,
+					Runtime: 96,
+					Genres:  []string{"drama"},
+					Version: 1,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "delete movie 3 with permission",
+			method:  http.MethodDelete,
+			headers: bobHeader,
+			path:    "/v1/movies/3",
+			want:    envelope{"message:": "movie successfully deleted"},
+			code:    http.StatusOK,
+		},
+		{
+			name:    "delete non-existent movie",
+			method:  http.MethodDelete,
+			headers: bobHeader,
+			path:    "/v1/movies/3",
+			want:    envelope{"error": "the requested resource could not be found"},
+			code:    http.StatusNotFound,
+		},
+		{
+			name:    "update movie",
+			method:  http.MethodPatch,
+			path:    "/v1/movies/2",
+			headers: bobHeader,
+			body: getMovieUpdateBody(
+				"Black Panther",
+				2018,
+				134,
+				[]string{"sci-fi", "action", "adventure"},
+			),
+			want: envelope{
+				"movie": data.Movie{
+					ID:      2,
+					Title:   "Black Panther",
+					Year:    2018,
+					Runtime: 134,
+					Genres:  []string{"sci-fi", "action", "adventure"},
+					Version: 2,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "update with empty body",
+			method:  http.MethodPatch,
+			path:    "/v1/movies/2",
+			body:    nil,
+			headers: bobHeader,
+			want:    envelope{"error": "body must not be empty"},
+			code:    http.StatusBadRequest,
+		},
+		{
+			name:    "partial update",
+			method:  http.MethodPatch,
+			path:    "/v1/movies/1",
+			headers: bobHeader,
+			body:    getMovieUpdateBody("", 2000, 0, []string{"animation"}),
+			want: envelope{
+				"movie": data.Movie{
+					ID:      1,
+					Title:   "Moana",
+					Year:    2000,
+					Runtime: 107,
+					Genres:  []string{"animation"},
+					Version: 2,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "get all movies",
+			method:  http.MethodGet,
+			path:    "/v1/movies",
+			headers: bobHeader,
+			want: envelope{
+				"metadata": data.Metadata{
+					CurrentPage:  1,
+					PageSize:     20,
+					FirstPage:    1,
+					LastPage:     1,
+					TotalRecords: 3,
+				},
+				"movies": []data.Movie{
+					{
+						ID:      1,
+						Title:   "Moana",
+						Year:    2000,
+						Runtime: 107,
+						Genres:  []string{"animation"},
+						Version: 2,
+					},
+					{
+						ID:      2,
+						Title:   "Black Panther",
+						Year:    2018,
+						Runtime: 134,
+						Genres:  []string{"sci-fi", "action", "adventure"},
+						Version: 2,
+					},
+					{
+						ID:      4,
+						Title:   "The Breakfast Club",
+						Year:    1986,
+						Runtime: 96,
+						Genres:  []string{"drama"},
+						Version: 1,
+					},
+				},
+			},
+			code: http.StatusOK,
+		},
 	}
 
 	for _, c := range movieCases {
@@ -563,4 +650,26 @@ func setRequestHeaders(t testing.TB, req *http.Request, headers map[string][]str
 			req.Header.Add(header, val)
 		}
 	}
+}
+
+func getMovieUpdateBody(title string, year int32, runtime data.Runtime, genres []string) movieUpdateBody {
+	body := movieUpdateBody{
+		Title:   nil,
+		Year:    nil,
+		Runtime: nil,
+		Genres:  nil,
+	}
+	if len(title) != 0 {
+		body.Title = &title
+	}
+	if year != 0 {
+		body.Year = &year
+	}
+	if runtime != 0 {
+		body.Runtime = &runtime
+	}
+	if genres != nil && validator.Unique(genres) {
+		body.Genres = genres
+	}
+	return body
 }

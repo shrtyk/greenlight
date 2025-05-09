@@ -105,6 +105,6 @@ func (m *PermissionInMemRepo) GetAllForUser(userID int64) (permissions Permissio
 }
 
 func (m *PermissionInMemRepo) AddForUser(userID int64, codes ...string) error {
-	m.permissions[userID] = Permissions(codes)
+	m.permissions[userID] = append(m.permissions[userID], codes...)
 	return nil
 }

@@ -27,33 +27,73 @@ func TestApi(t *testing.T) {
 		withModels(models),
 		withRateLimiter(limiter),
 		withMailer(mailer),
+		withVersion("test"),
 	)
 
 	server := app.routes()
 
 	cases := []struct {
-		name    string
-		method  string
-		path    string
-		headers map[string][]string
-		body    any
-		want    envelope
-		code    int
+		name   string
+		method string
+		path   string
+		body   any
+		want   envelope
+		code   int
 	}{
 		{
-			name:   "user creation",
+			name:   "user creation (bob)",
 			method: http.MethodPost,
 			path:   "/v1/users",
 			body: userCreateBody{
-				Email:    "shortyk@example.com",
-				Name:     "shortyk",
+				Email:    "bob@example.com",
+				Name:     "bob",
 				Password: "pa55word",
 			},
 			want: envelope{
 				"user": data.User{
 					ID:        1,
-					Email:     "shortyk@example.com",
-					Name:      "shortyk",
+					Email:     "bob@example.com",
+					Name:      "bob",
+					CreatedAt: data.MockTimeStamp,
+					Activated: false,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:   "user creation (alice)",
+			method: http.MethodPost,
+			path:   "/v1/users",
+			body: userCreateBody{
+				Email:    "alice@example.com",
+				Name:     "alice",
+				Password: "pa55word",
+			},
+			want: envelope{
+				"user": data.User{
+					ID:        2,
+					Email:     "alice@example.com",
+					Name:      "alice",
+					CreatedAt: data.MockTimeStamp,
+					Activated: false,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:   "user creation (tom)",
+			method: http.MethodPost,
+			path:   "/v1/users",
+			body: userCreateBody{
+				Email:    "tom@example.com",
+				Name:     "tom",
+				Password: "pa55word",
+			},
+			want: envelope{
+				"user": data.User{
+					ID:        3,
+					Email:     "tom@example.com",
+					Name:      "tom",
 					CreatedAt: data.MockTimeStamp,
 					Activated: false,
 				},
@@ -65,8 +105,8 @@ func TestApi(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/v1/users",
 			body: userCreateBody{
-				Email:    "shortyk@example.com",
-				Name:     "shortyk",
+				Email:    "bob@example.com",
+				Name:     "bob",
 				Password: "pa55word",
 			},
 			want: envelope{
@@ -109,7 +149,7 @@ func TestApi(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/v1/tokens/authentication",
 			body: userAuthenticationBody{
-				Email:    "shortyk@example.com",
+				Email:    "bob@example.com",
 				Password: "a55word",
 			},
 			want: envelope{
@@ -124,7 +164,7 @@ func TestApi(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/v1/tokens/authentication",
 			body: userAuthenticationBody{
-				Email:    "shortyk@example.com",
+				Email:    "bob@example.com",
 				Password: "password",
 			},
 			want: envelope{
@@ -137,7 +177,7 @@ func TestApi(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/v1/tokens/authentication",
 			body: userAuthenticationBody{
-				Email:    "shortyk@example.com",
+				Email:    "bob@example.com",
 				Password: "",
 			},
 			want: envelope{
@@ -152,7 +192,7 @@ func TestApi(t *testing.T) {
 			method: http.MethodPost,
 			path:   "/v1/tokens/authentication",
 			body: userAuthenticationBody{
-				Email:    "shortyk",
+				Email:    "bob",
 				Password: "pa55word",
 			},
 			want: envelope{
@@ -180,50 +220,339 @@ func TestApi(t *testing.T) {
 		})
 	}
 
-	t.Run("test user authentication", func(t *testing.T) {
-		rw := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodPost, "/v1/tokens/authentication", helpers.MustJSON(t, userAuthenticationBody{
-			Email:    "shortyk@example.com",
-			Password: "pa55word",
-		}))
-		assertions.AssertNoError(t, err)
+	// --------------------------------------------------------------------------------------------------------------
 
-		server.ServeHTTP(rw, req)
-
-		plainText := app.models.Tokens.GetUserTokens(1).Authentication
-		want, err := io.ReadAll(helpers.MustJSON(t, envelope{
-			"authentication_token": data.Token{
-				Plaintext: *plainText,
-				Expiry:    data.MockTimeStamp,
-			}}))
-		assertions.AssertNoError(t, err)
-
-		assertions.AssertStrings(t, rw.Body.String(), string(want))
-	})
-
-	t.Run("test user activation", func(t *testing.T) {
-		rw := httptest.NewRecorder()
-		req, err := http.NewRequest(http.MethodPut, "/v1/users/activated", helpers.MustJSON(t, activationToken{
-			TokenPlainText: *app.models.Tokens.GetUserTokens(1).Activation,
-		}))
-		assertions.AssertNoError(t, err)
-
-		server.ServeHTTP(rw, req)
-
-		want, err := io.ReadAll(helpers.MustJSON(t, envelope{
-			"user": data.User{
-				ID:        1,
-				Email:     "shortyk@example.com",
-				Name:      "shortyk",
-				CreatedAt: data.MockTimeStamp,
-				Activated: true,
+	authCases := []struct {
+		name   string
+		method string
+		path   string
+		userID int64
+		body   any
+		want   envelope
+		code   int
+	}{
+		{
+			name:   "bob authentication",
+			method: http.MethodPost,
+			path:   "/v1/tokens/authentication",
+			userID: 1,
+			body: userAuthenticationBody{
+				Email:    "bob@example.com",
+				Password: "pa55word",
 			},
-		}))
-		assertions.AssertNoError(t, err)
+		},
+		{
+			name:   "alice authentication",
+			method: http.MethodPost,
+			path:   "/v1/tokens/authentication",
+			userID: 2,
+			body: userAuthenticationBody{
+				Email:    "alice@example.com",
+				Password: "pa55word",
+			},
+		},
+		{
+			name:   "tom authentication",
+			method: http.MethodPost,
+			path:   "/v1/tokens/authentication",
+			userID: 3,
+			body: userAuthenticationBody{
+				Email:    "tom@example.com",
+				Password: "pa55word",
+			},
+		},
+	}
 
-		assertions.AssertStrings(t, rw.Body.String(), string(want))
-	})
+	for _, c := range authCases {
+		t.Run(c.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req, err := http.NewRequest(c.method, c.path, helpers.MustJSON(t, c.body))
+			assertions.AssertNoError(t, err)
 
+			server.ServeHTTP(rw, req)
+
+			plainText := app.models.Tokens.GetUserTokens(c.userID).Authentication
+			want, err := io.ReadAll(helpers.MustJSON(t, envelope{
+				"authentication_token": data.Token{
+					Plaintext: *plainText,
+					Expiry:    data.MockTimeStamp,
+				}}))
+			assertions.AssertNoError(t, err)
+
+			assertions.AssertStrings(t, rw.Body.String(), string(want))
+		})
+	}
+
+	activationCases := []struct {
+		name   string
+		method string
+		path   string
+		userID int64
+		want   envelope
+		code   int
+	}{
+		{
+			name:   "bob authentication",
+			method: http.MethodPut,
+			path:   "/v1/users/activated",
+			userID: 1,
+			want: envelope{
+				"user": data.User{
+					ID:        1,
+					Email:     "bob@example.com",
+					Name:      "bob",
+					CreatedAt: data.MockTimeStamp,
+					Activated: true,
+				},
+			},
+		},
+		{
+			name:   "alice authentication",
+			method: http.MethodPut,
+			path:   "/v1/users/activated",
+			userID: 2,
+			want: envelope{
+				"user": data.User{
+					ID:        2,
+					Email:     "alice@example.com",
+					Name:      "alice",
+					CreatedAt: data.MockTimeStamp,
+					Activated: true,
+				},
+			},
+		},
+	}
+
+	for _, c := range activationCases {
+		t.Run(c.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req, err := http.NewRequest(c.method, c.path, helpers.MustJSON(t, activationToken{
+				TokenPlainText: *app.models.Tokens.GetUserTokens(c.userID).Activation,
+			}))
+			assertions.AssertNoError(t, err)
+
+			server.ServeHTTP(rw, req)
+
+			want, err := io.ReadAll(helpers.MustJSON(t, c.want))
+			assertions.AssertNoError(t, err)
+
+			assertions.AssertStrings(t, rw.Body.String(), string(want))
+		})
+	}
+
+	// --------------------------------------------------------------------------------------------------------------
+
+	bob, err := app.models.Users.GetByEmail("bob@example.com")
+	assertions.AssertNoError(t, err)
+	// alice, _ := app.models.Users.GetByEmail("alice@example.com")
+
+	err = app.models.Permissions.AddForUser(bob.ID, data.MoviesWrite)
+	assertions.AssertNoError(t, err)
+
+	// At this point:
+	// Bob has read and write permissions
+	// Alice read only permissions
+	// Tom account not activated
+
+	bobAuthToken := *app.models.Tokens.GetUserTokens(1).Authentication
+	aliceAuthToken := *app.models.Tokens.GetUserTokens(2).Authentication
+	tomAuthToken := *app.models.Tokens.GetUserTokens(3).Authentication
+
+	bobHeader := map[string][]string{
+		"Authorization": {"Bearer " + bobAuthToken},
+	}
+	aliceHeader := map[string][]string{
+		"Authorization": {"Bearer " + aliceAuthToken},
+	}
+	tomHeader := map[string][]string{
+		"Authorization": {"Bearer " + tomAuthToken},
+	}
+
+	movieCases := []struct {
+		name    string
+		method  string
+		path    string
+		headers map[string][]string
+		body    any
+		want    envelope
+		code    int
+	}{
+		{
+			name:    "create movie 1",
+			method:  http.MethodPost,
+			path:    "/v1/movies",
+			headers: bobHeader,
+			body: movieCreateBody{
+				Title:   "Moana",
+				Year:    2016,
+				Runtime: 107,
+				Genres:  []string{"animation, adventure"},
+			},
+			want: envelope{
+				"movie": data.Movie{
+					ID:      1,
+					Title:   "Moana",
+					Year:    2016,
+					Runtime: 107,
+					Genres:  []string{"animation, adventure"},
+					Version: 1,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "get movie",
+			method:  http.MethodGet,
+			path:    "/v1/movies/1",
+			headers: bobHeader,
+			want: envelope{
+				"movie": data.Movie{
+					ID:      1,
+					Title:   "Moana",
+					Year:    2016,
+					Runtime: 107,
+					Genres:  []string{"animation, adventure"},
+					Version: 1,
+				},
+			},
+			code: http.StatusOK,
+		},
+		{
+			name:    "get movie as non active user",
+			method:  http.MethodGet,
+			path:    "/v1/movies/1",
+			headers: tomHeader,
+			want: envelope{
+				"error": "your user account must be activated to access this resource",
+			},
+			code: http.StatusForbidden,
+		},
+		{
+			name:    "create movie 2",
+			method:  http.MethodPost,
+			path:    "/v1/movies",
+			headers: bobHeader,
+			body: movieCreateBody{
+				Title:   "Black Panther",
+				Year:    2018,
+				Runtime: 134,
+				Genres:  []string{"action", "adventure"},
+			},
+			want: envelope{
+				"movie": data.Movie{
+					ID:      2,
+					Title:   "Black Panther",
+					Year:    2018,
+					Runtime: 134,
+					Genres:  []string{"action", "adventure"},
+					Version: 1,
+				},
+			},
+			code: http.StatusCreated,
+		},
+		{
+			name:    "create movie without write permission",
+			method:  http.MethodPost,
+			path:    "/v1/movies",
+			headers: aliceHeader,
+			body: movieCreateBody{
+				Title:   "Black Panther",
+				Year:    2018,
+				Runtime: 134,
+				Genres:  []string{"action", "adventure"},
+			},
+			want: envelope{
+				"error": "your user account doesn't have the necessary permissions to access this resource",
+			},
+			code: http.StatusUnauthorized,
+		},
+		// {
+		// 	name:   "create movie 2",
+		// 	method: http.MethodPost,
+		// 	path:   "/v1/movies",
+		// 	body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"]}`,
+		// 	want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["action","adventure"],"version":1}}`,
+		// 	code:   http.StatusCreated,
+		// },
+		// {
+		// 	name:   "create movie 3",
+		// 	method: http.MethodPost,
+		// 	path:   "/v1/movies",
+		// 	body:   `{"title":"Deadpool","year":2016, "runtime":"108 mins","genres":["action","comedy"]}`,
+		// 	want:   `{"movie":{"id":3,"title":"Deadpool","year":2016,"runtime":"108 mins","genres":["action","comedy"],"version":1}}`,
+		// 	code:   http.StatusCreated,
+		// },
+		// {
+		// 	name:   "create movie 4",
+		// 	method: http.MethodPost,
+		// 	path:   "/v1/movies",
+		// 	body:   `{"title":"The Breakfast Club","year":1986, "runtime":"96 mins","genres":["drama"]}`,
+		// 	want:   `{"movie":{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}}`,
+		// 	code:   http.StatusCreated,
+		// },
+		// {
+		// 	name:   "delete movie",
+		// 	method: http.MethodDelete,
+		// 	path:   "/v1/movies/3",
+		// 	want:   `{"message:":"movie successfully deleted"}`,
+		// 	code:   http.StatusOK,
+		// },
+		// {
+		// 	name:   "get wrong movie",
+		// 	method: http.MethodGet,
+		// 	path:   "/v1/movies/3",
+		// 	want:   `{"error":"the requested resource could not be found"}`,
+		// 	code:   http.StatusNotFound,
+		// },
+		// {
+		// 	name:   "update movie",
+		// 	method: http.MethodPatch,
+		// 	path:   "/v1/movies/2",
+		// 	body:   `{"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"]}`,
+		// 	want:   `{"movie":{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2}}`,
+		// 	code:   http.StatusCreated,
+		// },
+		// {
+		// 	name:   "update with empty body",
+		// 	method: http.MethodPatch,
+		// 	path:   "/v1/movies/2",
+		// 	want:   `{"error":"body must not be empty"}`,
+		// 	code:   http.StatusBadRequest,
+		// },
+		// {
+		// 	name:   "partial update",
+		// 	method: http.MethodPatch,
+		// 	path:   "/v1/movies/1",
+		// 	body:   `{"year":2000}`,
+		// 	want:   `{"movie":{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2}}`,
+		// 	code:   http.StatusCreated,
+		// },
+		// {
+		// 	name:   "get all movies",
+		// 	method: http.MethodGet,
+		// 	path:   "/v1/movies",
+		// 	want:   `{"metadata":{},"movies":[{"id":1,"title":"Moana","year":2000,"runtime":"107 mins","genres":["animation","adventure"],"version":2},{"id":2,"title":"Black Panther","year":2018,"runtime":"134 mins","genres":["sci-fi","action","adventure"],"version":2},{"id":4,"title":"The Breakfast Club","year":1986,"runtime":"96 mins","genres":["drama"],"version":1}]}`,
+		// 	code:   http.StatusOK,
+		// },
+	}
+
+	for _, c := range movieCases {
+		t.Run(c.name, func(t *testing.T) {
+			rw := httptest.NewRecorder()
+			req, err := http.NewRequest(c.method, c.path, helpers.MustJSON(t, c.body))
+			assertions.AssertNoError(t, err)
+
+			setRequestHeaders(t, req, c.headers)
+
+			server.ServeHTTP(rw, req)
+
+			want, err := io.ReadAll(helpers.MustJSON(t, c.want))
+			assertions.AssertNoError(t, err)
+
+			assertions.AssertStrings(t, rw.Body.String(), string(want))
+			assertions.AssertStatusCode(t, rw.Code, c.code)
+		})
+	}
 }
 
 func setRequestHeaders(t testing.TB, req *http.Request, headers map[string][]string) {

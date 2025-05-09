@@ -9,6 +9,19 @@ import (
 	"github.com/shortykevich/greenlight/internal/validator"
 )
 
+type movieCreateBody struct {
+	Title   string       `json:"title"`
+	Year    int32        `json:"year"`
+	Runtime data.Runtime `json:"runtime"`
+	Genres  []string     `json:"genres"`
+}
+
+type movieGetAllBody struct {
+	Title  string
+	Genres data.Genres
+	data.Filters
+}
+
 func (app *application) listMoviesHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
 		Title  string

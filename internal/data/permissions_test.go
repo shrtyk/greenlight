@@ -3,8 +3,8 @@ package data_test
 import (
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/testutils/assertions"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/testutils/assertions"
 )
 
 func TestPerms(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/mailer"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/mailer"
 )
 
 type application struct {

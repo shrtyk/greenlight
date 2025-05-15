@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/testutils/assertions"
+	"github.com/shrtyk/greenlight/internal/testutils/assertions"
 )
 
 func TestHealthCheck(t *testing.T) {

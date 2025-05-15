@@ -33,7 +33,7 @@ services:
       - app-network
 
   app:
-    image: ghcr.io/shortykevich/greenlight:latest
+    image: ghcr.io/shrtyk/greenlight:latest
     build:
       context: .
       args:

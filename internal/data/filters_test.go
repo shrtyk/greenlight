@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 func TestFilters(t *testing.T) {

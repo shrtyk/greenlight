@@ -1,4 +1,4 @@
-module github.com/shortykevich/greenlight
+module github.com/shrtyk/greenlight
 
 go 1.24.2
 

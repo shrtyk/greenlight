@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 type Filters struct {

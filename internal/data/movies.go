@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgtype"
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 type MovieRepository interface {

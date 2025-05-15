@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 type movieCreateBody struct {

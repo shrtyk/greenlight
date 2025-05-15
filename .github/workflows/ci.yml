@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 env:
-  IMAGE_NAME: ghcr.io/shortykevich/greenlight
+  IMAGE_NAME: ghcr.io/shrtyk/greenlight
 
 jobs:
   test:

@@ -7,11 +7,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/mailer"
-	"github.com/shortykevich/greenlight/internal/testutils/assertions"
-	"github.com/shortykevich/greenlight/internal/testutils/helpers"
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/mailer"
+	"github.com/shrtyk/greenlight/internal/testutils/assertions"
+	"github.com/shrtyk/greenlight/internal/testutils/helpers"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 func TestApi(t *testing.T) {
@@ -293,7 +293,7 @@ func TestApi(t *testing.T) {
 		code   int
 	}{
 		{
-			name:   "bob authentication",
+			name:   "bob activation",
 			method: http.MethodPut,
 			path:   "/v1/users/activated",
 			userID: 1,
@@ -308,7 +308,7 @@ func TestApi(t *testing.T) {
 			},
 		},
 		{
-			name:   "alice authentication",
+			name:   "alice activation",
 			method: http.MethodPut,
 			path:   "/v1/users/activated",
 			userID: 2,

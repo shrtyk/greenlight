@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/data"
 )
 
 func TestRuntimeType(t *testing.T) {

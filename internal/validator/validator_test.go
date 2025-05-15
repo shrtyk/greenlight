@@ -3,7 +3,7 @@ package validator_test
 import (
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 func TestValidator(t *testing.T) {

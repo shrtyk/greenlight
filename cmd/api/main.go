@@ -8,9 +8,9 @@ import (
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/joho/godotenv/autoload"
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/mailer"
-	"github.com/shortykevich/greenlight/internal/vcs"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/mailer"
+	"github.com/shrtyk/greenlight/internal/vcs"
 )
 
 func main() {

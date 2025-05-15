@@ -5,7 +5,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/data"
 )
 
 func AssertNoError(t testing.TB, err error) {

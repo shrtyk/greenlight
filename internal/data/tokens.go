@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 const (

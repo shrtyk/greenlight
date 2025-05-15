@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/shortykevich/greenlight/internal/data"
-	"github.com/shortykevich/greenlight/internal/mailer"
-	"github.com/shortykevich/greenlight/internal/validator"
+	"github.com/shrtyk/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/mailer"
+	"github.com/shrtyk/greenlight/internal/validator"
 )
 
 type userCreateBody struct {

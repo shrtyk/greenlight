@@ -4,7 +4,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/shortykevich/greenlight/internal/data"
+	"github.com/shrtyk/greenlight/internal/data"
 )
 
 type contextKey string
